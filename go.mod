@@ -1,4 +1,4 @@
-module github.com/Assetsadapter/neo-adapter
+module github.com/LeorCao/neo-adapter
 
 go 1.12
 
