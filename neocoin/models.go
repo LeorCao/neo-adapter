@@ -54,50 +54,124 @@ func NewBlockchainInfo(json *gjson.Result) *BlockchainInfo {
 	return b
 }
 
+// 账户余额 包含 NEO 主币 与 交易费用 GAS
+type UnspentBalance struct {
+	/*
+		"balance": [
+			{
+				"unspent": [
+					{
+						"txid": "bd454059e58da4221aaf4effa3278660b231e9af7cea97912f4ac5c4995bb7e4",
+						"n": 0,
+						"value": 600.41014479
+					}
+				],
+				"asset_hash": "602c79718b16e442de58778e148d0b1084e3b2dffd5de6b7b16cee7969282de7",
+				"asset": "GAS",
+				"asset_symbol": "GAS",
+				"amount": 29060.02316479
+			},
+			{
+				"unspent": [
+					{
+						"txid": "c3182952855314b3f4b1ecf01a03b891d4627d19426ce841275f6d4c186e729a",
+						"n": 0,
+						"value": 800000
+					}
+				],
+				"asset_hash": "c56f33fc6ecfcd0c225c4ab356fee59390af8560be0e930faebe74a6daff7c9b",
+				"asset": "NEO",
+				"asset_symbol": "NEO",
+				"amount": 800000
+			}
+		],
+		"address": "AGofsxAUDwt52KjaB664GYsqVAkULYvKNt"
+	*/
+	Key        string   `storm:"id"`
+	NEOUnspent *Unspent `json:"neo_unspent"` // 未花费的 NEO
+	GASUnspent *Unspent `json:"gas_unspent"` // 未花费的 GAS
+	AccountID  string   `json:"account_id" storm:"index"`
+	Address    string   `json:"address"` // 地址
+	HDAddress  openwallet.Address
+}
+
 //Unspent 未花记录
 type Unspent struct {
-
 	/*
-			{
-		        "txid" : "d54994ece1d11b19785c7248868696250ab195605b469632b7bd68130e880c9a",
-		        "vout" : 1,
-		        "address" : "mgnucj8nYqdrPFh2JfZSB1NmUThUGnmsqe",
-		        "account" : "test label",
-		        "scriptPubKey" : "76a9140dfc8bafc8419853b34d5e072ad37d1a5159f58488ac",
-		        "amount" : 0.00010000,
-		        "confirmations" : 6210,
-		        "spendable" : true,
-		        "solvable" : true
-		    }
+		{
+			"unspent": [
+				{
+					"txid": "bd454059e58da4221aaf4effa3278660b231e9af7cea97912f4ac5c4995bb7e4",
+					"n": 0,
+					"value": 600.41014479
+				}
+			],
+			"asset_hash": "602c79718b16e442de58778e148d0b1084e3b2dffd5de6b7b16cee7969282de7",
+			"asset": "GAS",
+			"asset_symbol": "GAS",
+			"amount": 29060.02316479
+		}
 	*/
-	Key           string `storm:"id"`
-	TxID          string `json:"txid"`
-	Vout          uint64 `json:"vout"`
-	Address       string `json:"address"`
-	AccountID     string `json:"account" storm:"index"`
-	ScriptPubKey  string `json:"scriptPubKey"`
-	Amount        string `json:"amount"`
-	Confirmations uint64 `json:"confirmations"`
-	Spendable     bool   `json:"spendable"`
-	Solvable      bool   `json:"solvable"`
-	HDAddress     openwallet.Address
+
+	UnspentTxs  *[]UnspentTx `json:"unspent_txs"`
+	AssetHash   string       `json:"asset_hash"`
+	Asset       string       `json:"asset"`
+	AssetSymbol string       `json:"asset_symbol"`
+	Amount      string       `json:"amount"`
+}
+
+// 未花费交易信息
+type UnspentTx struct {
+	/*
+		{
+			"txid": "c3182952855314b3f4b1ecf01a03b891d4627d19426ce841275f6d4c186e729a",
+			"n": 0,
+			"value": 800000
+		}
+	*/
+	TxID  string `json:"tx_id"`
+	N     uint64 `json:"n"`
+	Value string `json:"value"`
+}
+
+func NewUnspentBalance(json *gjson.Result) *UnspentBalance {
+	obj := &UnspentBalance{}
+	//解析json
+	arr := json.Get("balance").Array()
+	for _, a := range arr {
+		unspent := NewUnspent(&a)
+		if unspent.AssetSymbol == AssetSymbolGAS {
+			obj.GASUnspent = unspent
+		} else {
+			obj.NEOUnspent = unspent
+		}
+	}
+	obj.Address = gjson.Get(json.Raw, "address").String()
+
+	return obj
 }
 
 func NewUnspent(json *gjson.Result) *Unspent {
-	obj := &Unspent{}
-	//解析json
-	obj.TxID = gjson.Get(json.Raw, "txid").String()
-	obj.Vout = gjson.Get(json.Raw, "vout").Uint()
-	obj.Address = gjson.Get(json.Raw, "address").String()
-	obj.AccountID = gjson.Get(json.Raw, "account").String()
-	obj.ScriptPubKey = gjson.Get(json.Raw, "scriptPubKey").String()
-	obj.Amount = gjson.Get(json.Raw, "amount").String()
-	obj.Confirmations = gjson.Get(json.Raw, "confirmations").Uint()
-	//obj.Spendable = gjson.Get(json.Raw, "spendable").Bool()
-	obj.Spendable = true
-	obj.Solvable = gjson.Get(json.Raw, "solvable").Bool()
+	return &Unspent{
+		UnspentTxs:  NewUnspentTxs(json.Get("unspent").Array()),
+		AssetHash:   gjson.Get(json.Raw, "asset_hash").String(),
+		Asset:       gjson.Get(json.Raw, "asset").String(),
+		AssetSymbol: gjson.Get(json.Raw, "asset_symbol").String(),
+		Amount:      gjson.Get(json.Raw, "amount").String(),
+	}
+}
 
-	return obj
+func NewUnspentTxs(json []gjson.Result) *[]UnspentTx {
+	unspentTxs := new([]UnspentTx)
+	for _, j := range json {
+		unspentTx := UnspentTx{
+			TxID:  gjson.Get(j.Raw, "txid").String(),
+			N:     gjson.Get(j.Raw, "n").Uint(),
+			Value: gjson.Get(j.Raw, "value").String(),
+		}
+		*unspentTxs = append(*unspentTxs, unspentTx)
+	}
+	return unspentTxs
 }
 
 type UnspentSort struct {
@@ -126,12 +200,11 @@ type User struct {
 	UserKey string `storm:"id"`     // primary key
 	Group   string `storm:"index"`  // this field will be indexed
 	Email   string `storm:"unique"` // this field will be indexed with a unique constraint
-	Name    string // this field will not be indexed
-	Age     int    `storm:"index"`
+	Name    string                  // this field will not be indexed
+	Age     int `storm:"index"`
 }
 
 type Block struct {
-
 	/*
 
 		"hash": "000000000000000127454a8c91e74cf93ad76752cceb7eb3bcff0c398ba84b1f",
@@ -171,7 +244,7 @@ type Block struct {
 func (wm *WalletManager) NewBlock(json *gjson.Result) *Block {
 	obj := &Block{}
 	//解析json
-	obj.Height = gjson.Get(json.Raw, "height").Uint()
+	obj.Height = gjson.Get(json.Raw, "index").Uint()
 	obj.Hash = gjson.Get(json.Raw, "hash").String()
 	obj.Confirmations = gjson.Get(json.Raw, "confirmations").Uint()
 	obj.Merkleroot = gjson.Get(json.Raw, "merkleroot").String()
@@ -185,10 +258,8 @@ func (wm *WalletManager) NewBlock(json *gjson.Result) *Block {
 		if tx.IsObject() {
 			obj.isVerbose = true
 			txObj := wm.newTxByCore(&tx)
-			txObj.BlockHeight = obj.Height
-			txObj.BlockHash = obj.Hash
-			txObj.Blocktime = int64(obj.Time)
 			txDetails = append(txDetails, txObj)
+			txs = append(txs, txObj.TxID)
 		} else {
 			obj.isVerbose = false
 			txs = append(txs, tx.String())
@@ -239,21 +310,52 @@ func NewUnscanRecord(height uint64, txID, reason string) *UnscanRecord {
 type Transaction struct {
 	TxID          string
 	Size          uint64
+	Type          string
 	Version       uint64
-	LockTime      int64
-	Hex           string
+	Attributes    *[]Attribute
+	Vins          []*Vin
+	Vouts         []*Vout
+	SysFee        string // 系统交易费 每笔交易都有10GAS的免费额度
+	NetFee        string // 网络交易费 交易大小<1024 byte时网络费是可选的，最低为0.001GAS，>1024 byte时需要支付0.001GAS作为基础费用，且额外收取每字节 0.00001 GAS 的网络费
 	BlockHash     string
 	BlockHeight   uint64
 	Confirmations uint64
 	Blocktime     int64
-	IsCoinBase    bool
-	Fees          string
-	Decimals      int32
-
-	Vins  []*Vin
-	Vouts []*Vout
 }
 
+type Attribute struct {
+	/*
+		usage	uint8	使用类型
+		length	uint8	数据长度 (如有需要)
+		data	uint8	使用类型相关的外部数据
+	*/
+
+	/*
+		以下使用类型可以包括在交易的属性中
+		0	ContractHash	合约脚本哈希	32
+		2	ECDH02	用于ECDH密钥交换的公钥	32
+		3	ECDH03	用于ECDH密钥交换的公钥	32
+		32	Script	交易额外的验证	20
+		48	Vote	投票payload	应指定(最多255个字节)
+		129	DescriptionUrl	描述说明的URL	应指定 (最多255个字节)
+		144	Description	说明	应指定 (最多255个字节
+		161 - 175	Hash1-Hash15	自定义的存储哈希	32
+		240 - 255	Remark-Remark15	自定义的一般备注	应指定 (最多65535个字节)
+	*/
+
+	/*
+	   {
+	      "usage":144,
+	      "data":"5473685f323031372f322f382031363a31383a353931373033323132343035"
+	   }
+	*/
+
+	Usage  uint64 // 使用类型
+	Length uint8  // 数据长度 (如有需要, 可选)
+	Data   string // 使用类型相关的外部数据
+}
+
+// 交易输入
 type Vin struct {
 	Coinbase string
 	TxID     string
@@ -263,10 +365,12 @@ type Vin struct {
 	Value    string
 }
 
+// 交易输出
 type Vout struct {
 	N            uint64
 	Addr         string
 	Value        string
+	Asset        string
 	ScriptPubKey string
 	Type         string
 }
@@ -275,113 +379,125 @@ func (wm *WalletManager) newTxByCore(json *gjson.Result) *Transaction {
 
 	/*
 		{
-			"txid": "6595e0d9f21800849360837b85a7933aeec344a89f5c54cf5db97b79c803c462",
-			"hash": "f758cb5181d51f8bee1512b4a862faad5b51c7c85a1a11cd6092ffc1c6649bc5",
-			"version": 2,
-			"size": 249,
-			"vsize": 168,
-			"locktime": 1414190,
-			"vin": [],
-			"vout": [],
-			"hex": "02000000000101cc8a3077023c08040e677647ad0e528564764f456b01d8519828df165ab3c4550100000017160014aa59f94152351c79b57b14a53e538a923e332468feffffff02a716167c6f00000017a914a0fe07f130a36d9c7581ccd2886895c049b0cc8287ece29c00000000001976a9148c0bceb59d452b3e077f73a420b8bfe09e0550a788ac0247304402205e667171c1798cde426282bb8bff45901866ad6bf0d209e856c1765eda65ba4802203aaa319ea3de00eccef0006e6ee2089aed4b91ada7953f420a47c9c258d424ca0121033cfda2f93d13b01d46ecc406b03ebaba3e1bd526d2148a0a5d579d52f8c7cf022e941500",
-			"blockhash": "0000000040730ea7935cce346ce68bf4c07c10b137ba31960bf8a47c4f7da4ec",
-			"confirmations": 20076,
-			"time": 1537841342,
-			"blocktime": 1537841342
+			"txid": "0x28975702b73450d0f466e5b931eafbc04c0ea6a732162c548ff3d569fa627d9d",
+			"size": 262,
+			"type": "ContractTransaction",
+			"version": 0,
+			"attributes": [],
+			"vin": [
+				{
+					"txid": "0x9e6b682209f778a1246202524be785633e03129b6877040ad05134cc96336fcb",
+					"vout": 1
+				}
+			],
+			"vout": [
+				{
+					"n": 0,
+					"asset": "0xc56f33fc6ecfcd0c225c4ab356fee59390af8560be0e930faebe74a6daff7c9b",
+					"value": "100",
+					"address": "AGVziqTEhJJTQckrUuTQcyHNGV4ksKPPUT"
+				},
+				{
+					"n": 1,
+					"asset": "0xc56f33fc6ecfcd0c225c4ab356fee59390af8560be0e930faebe74a6daff7c9b",
+					"value": "99999590",
+					"address": "AXXYzk1kn9Bj8PHeqha921gqCpwJNRmuHC"
+				}
+			],
+			"sys_fee": "0",
+			"net_fee": "0",
+			"scripts": [
+				{
+					"invocation": "40f96445be5bd95cdb0f45049d4f69792ca30bef05aa05ee1c6a82ae7884f96038509930a4b731242e1b6577e457e6f8330238b4c1da1460df3d1f88bb46f8052b",
+					"verification": "21036943c02168ce22fb2e48a3f92dd72336d295e793a52633beba22ac46916dc201ac"
+				}
+			],
+			"blockhash": "0xd87f1b76d89a158ed54a0cb88701e5d5ad86ce6f86399ecb50c589a65d709881",
+			"confirmations": 4897,
+			"blocktime": 1573037731
 		}
 	*/
 
 	obj := Transaction{}
 	//解析json
 	obj.TxID = gjson.Get(json.Raw, "txid").String()
+	obj.Size = gjson.Get(json.Raw, "size").Uint()
+	obj.Type = gjson.Get(json.Raw, "type").String()
 	obj.Version = gjson.Get(json.Raw, "version").Uint()
-	obj.LockTime = gjson.Get(json.Raw, "locktime").Int()
+	obj.SysFee = gjson.Get(json.Raw, "sys_fee").String()
+	obj.NetFee = gjson.Get(json.Raw, "net_fee").String()
 	obj.BlockHash = gjson.Get(json.Raw, "blockhash").String()
-	//obj.BlockHeight = gjson.Get(json.Raw, "blockheight").Uint()
 	obj.Confirmations = gjson.Get(json.Raw, "confirmations").Uint()
 	obj.Blocktime = gjson.Get(json.Raw, "blocktime").Int()
-	obj.Size = gjson.Get(json.Raw, "size").Uint()
-	//obj.Fees = gjson.Get(json.Raw, "fees").String()
-	obj.Decimals = wm.Decimal()
+
+	obj.Attributes = new([]Attribute)
+	if attributes := gjson.Get(json.Raw, "attributes"); attributes.IsArray() {
+		for _, attr := range attributes.Array() {
+			*(obj.Attributes) = append(*(obj.Attributes), newAttributeByCore(&attr))
+		}
+	}
+
 	obj.Vins = make([]*Vin, 0)
 	if vins := gjson.Get(json.Raw, "vin"); vins.IsArray() {
-		for i, vin := range vins.Array() {
-			input := newTxVinByCore(&vin)
-			input.N = uint64(i)
-			obj.Vins = append(obj.Vins, input)
+		for _, vin := range vins.Array() {
+			obj.Vins = append(obj.Vins, newTxVinByCore(&vin))
 		}
 	}
 
 	obj.Vouts = make([]*Vout, 0)
 	if vouts := gjson.Get(json.Raw, "vout"); vouts.IsArray() {
 		for _, vout := range vouts.Array() {
-			output := newTxVoutByCore(&vout)
-			obj.Vouts = append(obj.Vouts, output)
+			obj.Vouts = append(obj.Vouts, newTxVoutByCore(&vout))
 		}
 	}
 
 	return &obj
 }
 
-func newTxVinByCore(json *gjson.Result) *Vin {
-
+func newAttributeByCore(json *gjson.Result) Attribute {
 	/*
-		{
-			"txid": "55c4b35a16df289851d8016b454f766485520ead4776670e04083c0277308acc",
-			"vout": 1,
-			"scriptSig": {
-				"asm": "0014aa59f94152351c79b57b14a53e538a923e332468",
-				"hex": "160014aa59f94152351c79b57b14a53e538a923e332468"
-			},
-			"txinwitness": ["304402205e667171c1798cde426282bb8bff45901866ad6bf0d209e856c1765eda65ba4802203aaa319ea3de00eccef0006e6ee2089aed4b91ada7953f420a47c9c258d424ca01", "033cfda2f93d13b01d46ecc406b03ebaba3e1bd526d2148a0a5d579d52f8c7cf02"],
-			"sequence": 4294967294
-		}
+	   {
+	      "usage":144,
+	      "data":"5473685f323031372f322f382031363a31383a353931373033323132343035"
+	   }
 	*/
-	obj := Vin{}
-	//解析json
-	obj.TxID = gjson.Get(json.Raw, "txid").String()
-	obj.Vout = gjson.Get(json.Raw, "vout").Uint()
-	obj.Coinbase = gjson.Get(json.Raw, "coinbase").String()
-	//obj.Addr = gjson.Get(json.Raw, "addr").String()
-	//obj.Value = gjson.Get(json.Raw, "value").String()
 
-	return &obj
+	return Attribute{
+		Usage: gjson.Get(json.Raw, "usage").Uint(),
+		Data:  gjson.Get(json.Raw, "data").String(),
+	}
+}
+
+func newTxVinByCore(json *gjson.Result) *Vin {
+	/*
+	   {
+	      "txid":"0x3631f66024ca6f5b033d7e0809eb993443374830025af904fb51b0334f127cda",
+	      "vout":0
+	   }
+	*/
+
+	return &Vin{
+		TxID: gjson.Get(json.Raw, "txid").String(),
+		Vout: gjson.Get(json.Raw, "vout").Uint(),
+	}
 }
 
 func newTxVoutByCore(json *gjson.Result) *Vout {
 
 	/*
-		{
-			"value": 4788.23192231,
-			"n": 0,
-			"scriptPubKey": {
-				"asm": "OP_HASH160 a0fe07f130a36d9c7581ccd2886895c049b0cc82 OP_EQUAL",
-				"hex": "a914a0fe07f130a36d9c7581ccd2886895c049b0cc8287",
-				"reqSigs": 1,
-				"type": "scripthash",
-				"addresses": ["2N7vURMwMDjqgijLNFsErFLAWtAg58S6qNv"]
-			}
-		}
+	   {
+	      "n":1,
+	      "asset":"0xc56f33fc6ecfcd0c225c4ab356fee59390af8560be0e930faebe74a6daff7c9b",
+	      "value":"99999000",
+	      "address":"AWHX6wX5mEJ4Vwg7uBcqESeq3NggtNFhzD"
+	   }
 	*/
-	obj := Vout{}
-	//解析json
-	obj.Value = gjson.Get(json.Raw, "value").String()
-	obj.N = gjson.Get(json.Raw, "n").Uint()
-	obj.ScriptPubKey = gjson.Get(json.Raw, "scriptPubKey.hex").String()
-
-	//提取地址
-	if addresses := gjson.Get(json.Raw, "scriptPubKey.addresses"); addresses.IsArray() {
-		obj.Addr = addresses.Array()[0].String()
+	return &Vout{
+		N:     gjson.Get(json.Raw, "n").Uint(),
+		Asset: gjson.Get(json.Raw, "asset").String(),
+		Value: gjson.Get(json.Raw, "value").String(),
+		Addr:  gjson.Get(json.Raw, "address").String(),
 	}
-
-	obj.Type = gjson.Get(json.Raw, "scriptPubKey.type").String()
-
-	//if len(obj.Addr) == 0 {
-	//	scriptBytes, _ := hex.DecodeString(obj.ScriptPubKey)
-	//	obj.Addr, _ = wm.Decoder.ScriptPubKeyToBech32Address(scriptBytes)
-	//}
-
-	return &obj
 }
 
 func DecodeScript(script string) ([]byte, error) {

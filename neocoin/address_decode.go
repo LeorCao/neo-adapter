@@ -55,9 +55,9 @@ func NewAddressDecoder(wm *WalletManager) *addressDecoder {
 //PrivateKeyToWIF 私钥转WIF
 func (decoder *addressDecoder) PrivateKeyToWIF(priv []byte, isTestnet bool) (string, error) {
 
-	cfg := addressEncoder.BTC_mainnetPrivateWIFCompressed
+	cfg := addressEncoder.NEO_mainnetPrivateWIFCompressed
 	if decoder.wm.Config.IsTestNet {
-		cfg = addressEncoder.BTC_testnetPrivateWIFCompressed
+		cfg = addressEncoder.NEO_testnetPrivateWIFCompressed
 	}
 
 	//privateKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), priv)
@@ -75,9 +75,9 @@ func (decoder *addressDecoder) PrivateKeyToWIF(priv []byte, isTestnet bool) (str
 //PublicKeyToAddress 公钥转地址
 func (decoder *addressDecoder) PublicKeyToAddress(pub []byte, isTestnet bool) (string, error) {
 
-	cfg := addressEncoder.BTC_mainnetAddressP2PKH
+	cfg := addressEncoder.NEO_mainnetAddressP2PKH
 	if decoder.wm.Config.IsTestNet {
-		cfg = addressEncoder.BTC_testnetAddressP2PKH
+		cfg = addressEncoder.NEO_testnetAddressP2PKH
 	}
 
 	//pkHash := btcutil.Hash160(pub)
@@ -86,17 +86,24 @@ func (decoder *addressDecoder) PublicKeyToAddress(pub []byte, isTestnet bool) (s
 	//	return "", err
 	//}
 
-	pkHash := owcrypt.Hash(pub, 0, owcrypt.HASH_ALG_HASH160)
+	pub = append([]byte{0x21}, pub...)
+	pub = append(pub, 0xac)
+
+	sha256result := owcrypt.Hash(pub, 0, owcrypt.HASH_ALG_SHA256)
+
+	pkHash := owcrypt.Hash(sha256result, 0, owcrypt.HASH_ALG_RIPEMD160)
+
+	//pkHash := owcrypt.Hash(pub, 0, owcrypt.HASH_ALG_HASH160)
 
 	address := addressEncoder.AddressEncode(pkHash, cfg)
 
-	if decoder.wm.Config.RPCServerType == RPCServerCore {
-		//如果使用core钱包作为全节点，需要导入地址到core，这样才能查询地址余额和utxo
-		err := decoder.wm.ImportAddress(address, "")
-		if err != nil {
-			return "", err
-		}
-	}
+	//if decoder.wm.Config.RPCServerType == RPCServerCore {
+	//	//如果使用core钱包作为全节点，需要导入地址到core，这样才能查询地址余额和utxo
+	//	err := decoder.wm.ImportAddress(address, "")
+	//	if err != nil {
+	//		return "", err
+	//	}
+	//}
 
 	return address, nil
 

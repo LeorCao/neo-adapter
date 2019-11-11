@@ -167,10 +167,10 @@ func (wm *WalletManager) getTransactionByExplorer(txid string) (*Transaction, er
 }
 
 //listUnspentByExplorer 获取未花交易
-func (wm *WalletManager) listUnspentByExplorer(min uint64, address ...string) ([]*Unspent, error) {
+func (wm *WalletManager) listUnspentByExplorer(min uint64, address ...string) ([]*UnspentBalance, error) {
 
 	var (
-		utxos = make([]*Unspent, 0)
+		utxos = make([]*UnspentBalance, 0)
 	)
 
 	addrs := strings.Join(address, ",")
@@ -186,13 +186,7 @@ func (wm *WalletManager) listUnspentByExplorer(min uint64, address ...string) ([
 		return nil, err
 	}
 
-	array := result.Array()
-	for _, a := range array {
-		u := NewUnspent(&a)
-		if u.Confirmations >= min {
-			utxos = append(utxos, NewUnspent(&a))
-		}
-	}
+	utxos = append(utxos, NewUnspentBalance(result))
 
 	return utxos, nil
 
@@ -265,7 +259,6 @@ func (wm *WalletManager) newTxByExplorer(json *gjson.Result) *Transaction {
 	//解析json
 	obj.TxID = gjson.Get(json.Raw, "txid").String()
 	obj.Version = gjson.Get(json.Raw, "version").Uint()
-	obj.LockTime = gjson.Get(json.Raw, "locktime").Int()
 	obj.BlockHash = gjson.Get(json.Raw, "blockhash").String()
 	blockHeight := gjson.Get(json.Raw, "blockheight").Int()
 	if blockHeight < 0 {
@@ -277,7 +270,6 @@ func (wm *WalletManager) newTxByExplorer(json *gjson.Result) *Transaction {
 	obj.Confirmations = gjson.Get(json.Raw, "confirmations").Uint()
 	obj.Blocktime = gjson.Get(json.Raw, "blocktime").Int()
 	obj.Size = gjson.Get(json.Raw, "size").Uint()
-	obj.Fees = gjson.Get(json.Raw, "fees").String()
 
 	obj.Vins = make([]*Vin, 0)
 	if vins := gjson.Get(json.Raw, "vin"); vins.IsArray() {

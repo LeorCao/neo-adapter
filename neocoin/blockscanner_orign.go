@@ -7,11 +7,11 @@ import (
 )
 
 //BlockScanNotificationObject 扫描被通知对象
-type BTCBlockScanNotificationObject interface {
+type NEOBlockScanNotificationObject interface {
 
 	//BlockScanNotify 新区块扫描完成通知
 	//@required
-	BTCBlockScanNotify(block *Block, txs []*Transaction) error
+	NEOBlockScanNotify(block *Block, txs []*Transaction) error
 }
 
 //ExtractTxOriginResult
@@ -21,12 +21,12 @@ type ExtractTxOriginResult struct {
 }
 
 //SetScanBlockTaskOrigin 扫描任务
-func (bs *BTCBlockScanner) SetScanBlockTaskOrigin() {
+func (bs *NEOBlockScanner) SetScanBlockTaskOrigin() {
 	bs.SetTask(bs.ScanBlockTaskOrigin)
 }
 
 //ScanBlockTask 扫描任务
-func (bs *BTCBlockScanner) ScanBlockTaskOrigin() {
+func (bs *NEOBlockScanner) ScanBlockTaskOrigin() {
 
 	//获取本地区块高度
 	blockHeader, err := bs.GetScannedBlockHeaderOrigin()
@@ -164,7 +164,7 @@ func (bs *BTCBlockScanner) ScanBlockTaskOrigin() {
 }
 
 //ScanTxMemPool 扫描交易内存池
-func (bs *BTCBlockScanner) ScanTxMemPoolOrigin() {
+func (bs *NEOBlockScanner) ScanTxMemPoolOrigin() {
 
 	bs.wm.Log.Std.Info("block scanner scanning mempool ...")
 
@@ -197,7 +197,7 @@ func (bs *BTCBlockScanner) ScanTxMemPoolOrigin() {
 
 //BatchExtractTransaction 批量提取交易单
 //bitcoin 1M的区块链可以容纳3000笔交易，批量多线程处理，速度更快
-func (bs *BTCBlockScanner) BatchExtractTransactionOrigin(block *Block) error {
+func (bs *NEOBlockScanner) BatchExtractTransactionOrigin(block *Block) error {
 
 	var (
 		done       = 0 //完成标记
@@ -291,7 +291,7 @@ func (bs *BTCBlockScanner) BatchExtractTransactionOrigin(block *Block) error {
 }
 
 //AddObserver 添加观测者
-func (bs *BTCBlockScanner) AddBTCBlockObserver(obj BTCBlockScanNotificationObject) error {
+func (bs *NEOBlockScanner) AddBTCBlockObserver(obj NEOBlockScanNotificationObject) error {
 	bs.Mu.Lock()
 
 	defer bs.Mu.Unlock()
@@ -299,37 +299,37 @@ func (bs *BTCBlockScanner) AddBTCBlockObserver(obj BTCBlockScanNotificationObjec
 	if obj == nil {
 		return nil
 	}
-	if _, exist := bs.BTCBlockObservers[obj]; exist {
+	if _, exist := bs.NEOBlockObservers[obj]; exist {
 		//已存在，不重复订阅
 		return nil
 	}
 
-	bs.BTCBlockObservers[obj] = true
+	bs.NEOBlockObservers[obj] = true
 
 	return nil
 }
 
 //RemoveObserver 移除观测者
-func (bs *BTCBlockScanner) RemoveBTCBlockObserver(obj BTCBlockScanNotificationObject) error {
+func (bs *NEOBlockScanner) RemoveBTCBlockObserver(obj NEOBlockScanNotificationObject) error {
 	bs.Mu.Lock()
 	defer bs.Mu.Unlock()
 
-	delete(bs.BTCBlockObservers, obj)
+	delete(bs.NEOBlockObservers, obj)
 
 	return nil
 }
 
 //newBlockNotify 获得新区块后，通知给观测者
-func (bs *BTCBlockScanner) NewBTCBlockNotify(block *Block, isFork bool) {
+func (bs *NEOBlockScanner) NewBTCBlockNotify(block *Block, isFork bool) {
 	block.Fork = isFork
-	for o, _ := range bs.BTCBlockObservers {
-		o.BTCBlockScanNotify(block, block.txDetails)
+	for o, _ := range bs.NEOBlockObservers {
+		o.NEOBlockScanNotify(block, block.txDetails)
 	}
 }
 
 
 //GetScannedBlockHeader 获取当前扫描的区块头
-func (bs *BTCBlockScanner) GetScannedBlockHeaderOrigin() (*openwallet.BlockHeader, error) {
+func (bs *NEOBlockScanner) GetScannedBlockHeaderOrigin() (*openwallet.BlockHeader, error) {
 
 	var (
 		blockHeight uint64 = 0

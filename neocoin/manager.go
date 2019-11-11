@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -54,7 +53,7 @@ type WalletManager struct {
 	ExplorerClient  *Explorer                     // 浏览器API客户端
 	Config          *WalletConfig                 //钱包管理配置
 	WalletsInSum    map[string]*openwallet.Wallet //参与汇总的钱包
-	Blockscanner    *BTCBlockScanner              //区块扫描器
+	Blockscanner    *NEOBlockScanner              //区块扫描器
 	Decoder         AddressDecoder                //地址编码器
 	TxDecoder       openwallet.TransactionDecoder //交易单编码器
 	Log             *log.OWLogger                 //日志工具
@@ -69,7 +68,7 @@ func NewWalletManager() *WalletManager {
 	//参与汇总的钱包
 	wm.WalletsInSum = make(map[string]*openwallet.Wallet)
 	//区块扫描器
-	wm.Blockscanner = NewBTCBlockScanner(&wm)
+	wm.Blockscanner = NewNEOBlockScanner(&wm)
 	wm.Decoder = NewAddressDecoder(&wm)
 	wm.TxDecoder = NewTransactionDecoder(&wm)
 	wm.Log = log.NewOWLogger(wm.Symbol())
@@ -608,7 +607,7 @@ func (wm *WalletManager) GetWalletBalance(accountID string) string {
 	//	true,
 	//}
 
-	wm.RebuildWalletUnspent(accountID)
+	/*wm.RebuildWalletUnspent(accountID)
 	utxos, err := wm.ListUnspentFromLocalDB(accountID)
 	if err != nil {
 		return "0"
@@ -622,7 +621,7 @@ func (wm *WalletManager) GetWalletBalance(accountID string) string {
 			amount, _ := decimal.NewFromString(utxo.Amount)
 			balance = balance.Add(amount)
 		}
-	}
+	}*/
 
 	//for _, u := range utxos {
 	//	amount, _ := decimal.NewFromString(u.Amount)
@@ -634,7 +633,8 @@ func (wm *WalletManager) GetWalletBalance(accountID string) string {
 	//	return "", err
 	//}
 
-	return balance.StringFixed(wm.Decimal())
+	//return balance.StringFixed(wm.Decimal())
+	return ""
 }
 
 //GetAddressBalance 获取地址余额
@@ -986,7 +986,7 @@ func (wm *WalletManager) GetBlockChainInfo() (*BlockchainInfo, error) {
 }
 
 //ListUnspent 获取未花记录
-func (wm *WalletManager) ListUnspent(min uint64, addresses ...string) ([]*Unspent, error) {
+func (wm *WalletManager) ListUnspent(min uint64, addresses ...string) ([]*UnspentBalance, error) {
 
 	//:分页限制
 
@@ -995,8 +995,8 @@ func (wm *WalletManager) ListUnspent(min uint64, addresses ...string) ([]*Unspen
 		searchAddrs = make([]string, 0)
 		max         = len(addresses)
 		step        = max / limit
-		utxo        = make([]*Unspent, 0)
-		pice        []*Unspent
+		utxo        = make([]*UnspentBalance, 0)
+		pice        *UnspentBalance
 		err         error
 	)
 
@@ -1013,49 +1013,46 @@ func (wm *WalletManager) ListUnspent(min uint64, addresses ...string) ([]*Unspen
 			continue
 		}
 
-		if wm.Config.RPCServerType == RPCServerExplorer {
-			pice, err = wm.listUnspentByExplorer(min, searchAddrs...)
+		for _, addr := range searchAddrs {
+			/*if wm.Config.RPCServerType == RPCServerExplorer {
+				pice, err = wm.listUnspentByExplorer(min, addr)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				pice, err = wm.getListUnspentByCore(min, addr)
+				if err != nil {
+					return nil, err
+				}
+			}*/
+			pice, err = wm.getListUnspentByCore(min, addr)
 			if err != nil {
 				return nil, err
 			}
-		} else {
-			pice, err = wm.getListUnspentByCore(min, searchAddrs...)
-			if err != nil {
-				return nil, err
-			}
+			utxo = append(utxo, pice)
 		}
-		utxo = append(utxo, pice...)
+
 	}
 	return utxo, nil
 }
 
-//getTransactionByCore 获取交易单
-func (wm *WalletManager) getListUnspentByCore(min uint64, addresses ...string) ([]*Unspent, error) {
+//getTransactionByCore 获取交易单 neo 的 getunspents 接口一次请求只接收一个地址，传入多个地址默认只返回第一个地址的utxo信息
+func (wm *WalletManager) getListUnspentByCore(min uint64, addresse string) (*UnspentBalance, error) {
 
 	var (
-		utxos = make([]*Unspent, 0)
+		balance = new(UnspentBalance)
 	)
 
-	request := []interface{}{
-		min,
-		9999999,
-	}
+	request := []interface{}{addresse}
 
-	if len(addresses) > 0 {
-		request = append(request, addresses)
-	}
-
-	result, err := wm.WalletClient.Call("listunspent", request)
+	result, err := wm.WalletClient.Call("getunspents", request)
 	if err != nil {
 		return nil, err
 	}
 
-	array := result.Array()
-	for _, a := range array {
-		utxos = append(utxos, NewUnspent(&a))
-	}
+	balance = NewUnspentBalance(result)
 
-	return utxos, nil
+	return balance, nil
 }
 
 //RebuildWalletUnspent 批量插入未花记录到本地
@@ -1111,7 +1108,7 @@ func (wm *WalletManager) RebuildWalletUnspent(walletID string) error {
 		err = db.One("Address", utxo.Address, &addr)
 		utxo.AccountID = addr.AccountID
 		utxo.HDAddress = addr
-		key := common.NewString(fmt.Sprintf("%s_%d_%s", utxo.TxID, utxo.Vout, utxo.Address)).SHA256()
+		key := common.NewString(fmt.Sprintf("%s", utxo.Address)).SHA256()
 		utxo.Key = key
 
 		err = tx.Save(utxo)
@@ -1172,19 +1169,19 @@ func (wm *WalletManager) BuildTransaction(utxos []*Unspent, to []string, change 
 		totalSend   = decimal.New(0, 0)
 	)
 
-	for _, u := range utxos {
-
-		if u.Spendable {
-			ua, _ := decimal.NewFromString(u.Amount)
-			totalAmount = totalAmount.Add(ua)
-
-			inputs = append(inputs, map[string]interface{}{
-				"txid": u.TxID,
-				"vout": u.Vout,
-			})
-		}
-
-	}
+	//for _, u := range utxos {
+	//
+	//	if u.Spendable {
+	//		ua, _ := decimal.NewFromString(u.Amount)
+	//		totalAmount = totalAmount.Add(ua)
+	//
+	//		inputs = append(inputs, map[string]interface{}{
+	//			"txid": u.TxID,
+	//			"vout": u.Vout,
+	//		})
+	//	}
+	//
+	//}
 
 	//计算总发送金额
 	for _, amount := range amount {
@@ -1224,7 +1221,7 @@ func (wm *WalletManager) BuildTransaction(utxos []*Unspent, to []string, change 
 }
 
 //SignRawTransactionInCoreWallet 钱包交易单
-func (wm *WalletManager) SignRawTransactionInCoreWallet(txHex, walletID string, key *hdkeystore.HDKey, utxos []*Unspent) (string, error) {
+func (wm *WalletManager) SignRawTransactionInCoreWallet(txHex, walletID string, key *hdkeystore.HDKey, utxos []*UnspentBalance) (string, error) {
 
 	var (
 		wifs = make([]string, 0)
@@ -1306,15 +1303,15 @@ func (wm *WalletManager) sendRawTransactionByCore(txHex string) (string, error) 
 func (wm *WalletManager) SendTransaction(walletID, to string, amount decimal.Decimal, password string, feesInSender bool) ([]string, error) {
 
 	var (
-		usedUTXO   []*Unspent
+		/*usedUTXO   []*UnspentBalance
 		balance    = decimal.New(0, 0)
 		totalSend  = amount
 		actualFees = decimal.New(0, 0)
-		sendTime   = 1
-		txIDs      = make([]string, 0)
+		sendTime   = 1*/
+		txIDs = make([]string, 0)
 	)
 
-	utxos, err := wm.ListUnspentFromLocalDB(walletID)
+	/*utxos, err := wm.ListUnspentFromLocalDB(walletID)
 	if err != nil {
 		return nil, err
 	}
@@ -1370,19 +1367,17 @@ func (wm *WalletManager) SendTransaction(walletID, to string, amount decimal.Dec
 	//循环的计算余额是否足够支付发送数额+手续费
 	for {
 
-		usedUTXO = make([]*Unspent, 0)
+		usedUTXO = make([]*UnspentBalance, 0)
 		balance = decimal.New(0, 0)
 
 		//计算一个可用于支付的余额
 		for _, u := range utxos {
 
-			if u.Spendable {
-				ua, _ := decimal.NewFromString(u.Amount)
-				balance = balance.Add(ua)
-				usedUTXO = append(usedUTXO, u)
-				if balance.GreaterThanOrEqual(totalSend) {
-					break
-				}
+			ua, _ := decimal.NewFromString(u.Amount)
+			balance = balance.Add(ua)
+			usedUTXO = append(usedUTXO, u)
+			if balance.GreaterThanOrEqual(totalSend) {
+				break
 			}
 		}
 
@@ -1437,7 +1432,7 @@ func (wm *WalletManager) SendTransaction(walletID, to string, amount decimal.Dec
 
 	for i := 0; i < sendTime; i++ {
 
-		var sendUxto []*Unspent
+		var sendUxto []*UnspentBalance
 		var pieceOfSend = decimal.New(0, 0)
 
 		s := i * wm.Config.MaxTxInputs
@@ -1451,7 +1446,7 @@ func (wm *WalletManager) SendTransaction(walletID, to string, amount decimal.Dec
 			sendUxto = usedUTXO[s : s+wm.Config.MaxTxInputs]
 
 			for _, u := range sendUxto {
-				ua, _ := decimal.NewFromString(u.Amount)
+				ua, _ := decimal.NewFromString(u.NEOUnspent.Amount)
 				pieceOfSend = pieceOfSend.Add(ua)
 			}
 
@@ -1512,14 +1507,15 @@ func (wm *WalletManager) SendTransaction(walletID, to string, amount decimal.Dec
 	wm.clearUnspends(usedUTXO, w)
 
 	wm.LockWallet()
-
+	*/
 	return txIDs, nil
 }
 
 //SendBatchTransaction 发送批量交易
 func (wm *WalletManager) SendBatchTransaction(walletID string, to []string, amounts []decimal.Decimal, password string) (string, error) {
 
-	var (
+	return "", nil
+	/*var (
 		usedUTXO []*Unspent
 		balance  = decimal.New(0, 0)
 		//totalSend  = amounts
@@ -1691,7 +1687,7 @@ func (wm *WalletManager) SendBatchTransaction(walletID string, to []string, amou
 
 	wm.LockWallet()
 
-	return txid, nil
+	return txid, nil*/
 }
 
 //CreateChangeAddress 创建找零地址
@@ -1812,7 +1808,7 @@ func (wm *WalletManager) SummaryWallets() {
 				wm.Log.Std.Info("Summary account[%s]successfully，Received Address[%s], TXID：%s", wallet.WalletID, wm.Config.SumAddress, txID)
 			}
 		} else {
-			wm.Log.Std.Info("Wallet Account[%s]-[%s]Current Balance: %v，below threshold: %v", wallet.Alias, wallet.WalletID, balance, wm.Config.Threshold)
+			wm.Log.Std.Info("Wallet Account[%s]-[%s]Current UnspentBalance: %v，below threshold: %v", wallet.Alias, wallet.WalletID, balance, wm.Config.Threshold)
 		}
 	}
 
@@ -1998,7 +1994,7 @@ func (wm *WalletManager) printWalletList(list []*openwallet.Wallet) {
 
 	t := gotabulate.Create(tableInfo)
 	// Set Headers
-	t.SetHeaders([]string{"No.", "ID", "Name", "Balance"})
+	t.SetHeaders([]string{"No.", "ID", "Name", "UnspentBalance"})
 
 	//打印信息
 	fmt.Println(t.Render("simple"))

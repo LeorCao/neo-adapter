@@ -579,7 +579,7 @@ func (wm *WalletManager) ImportWatchOnlyAddress(address ...*openwallet.Address) 
 func (wm *WalletManager) GetAddressWithBalance(address ...*openwallet.Address) error {
 
 	var (
-		addressMap = make(map[string]*openwallet.Address)
+		addressMap  = make(map[string]*openwallet.Address)
 		searchAddrs = make([]string, 0)
 	)
 
@@ -588,7 +588,6 @@ func (wm *WalletManager) GetAddressWithBalance(address ...*openwallet.Address) e
 	//if err != nil {
 	//	return err
 	//}
-
 
 	for _, address := range address {
 		searchAddrs = append(searchAddrs, address.Address)
@@ -607,7 +606,7 @@ func (wm *WalletManager) GetAddressWithBalance(address ...*openwallet.Address) e
 	//设置utxo的钱包账户
 	for _, utxo := range utxos {
 		a := addressMap[utxo.Address]
-		a.Balance = utxo.Amount
+		a.Balance = utxo.NEOUnspent.Amount
 
 	}
 

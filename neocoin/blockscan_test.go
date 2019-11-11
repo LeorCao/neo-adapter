@@ -16,6 +16,7 @@
 package neocoin
 
 import (
+	"fmt"
 	"github.com/asdine/storm"
 	"github.com/blocktree/openwallet/log"
 	"github.com/blocktree/openwallet/openwallet"
@@ -24,7 +25,7 @@ import (
 	"testing"
 )
 
-func TestGetBTCBlockHeight(t *testing.T) {
+func TestGetNEOBlockHeight(t *testing.T) {
 	height, err := tw.GetBlockHeight()
 	if err != nil {
 		t.Errorf("GetBlockHeight failed unexpected error: %v\n", err)
@@ -33,8 +34,8 @@ func TestGetBTCBlockHeight(t *testing.T) {
 	t.Logf("GetBlockHeight height = %d \n", height)
 }
 
-func TestBTCBlockScanner_GetCurrentBlockHeight(t *testing.T) {
-	bs := NewBTCBlockScanner(tw)
+func TestNEOBlockScanner_GetCurrentBlockHeight(t *testing.T) {
+	bs := NewNEOBlockScanner(tw)
 	header, _ := bs.GetCurrentBlockHeader()
 	t.Logf("GetCurrentBlockHeight height = %d \n", header.Height)
 	t.Logf("GetCurrentBlockHeight hash = %v \n", header.Hash)
@@ -52,7 +53,7 @@ func TestGetLocalNewBlock(t *testing.T) {
 }
 
 func TestSaveLocalBlockHeight(t *testing.T) {
-	bs := NewBTCBlockScanner(tw)
+	bs := NewNEOBlockScanner(tw)
 	header, _ := bs.GetCurrentBlockHeader()
 	t.Logf("SaveLocalBlockHeight height = %d \n", header.Height)
 	t.Logf("GetLocalBlockHeight hash = %v \n", header.Hash)
@@ -88,7 +89,7 @@ func TestGetTransaction(t *testing.T) {
 	t.Logf("BlockHash = %v \n", raw.BlockHash)
 	t.Logf("BlockHeight = %v \n", raw.BlockHeight)
 	t.Logf("Blocktime = %v \n", raw.Blocktime)
-	t.Logf("Fees = %v \n", raw.Fees)
+	t.Logf("Fees = %v \n", raw.SysFee)
 
 	t.Logf("========= vins ========= \n")
 
@@ -126,18 +127,18 @@ func TestGetTxIDsInMemPool(t *testing.T) {
 	t.Logf("GetTxIDsInMemPool = %v \n", txids)
 }
 
-func TestBTCBlockScanner_scanning(t *testing.T) {
+func TestNEOBlockScanner_scanning(t *testing.T) {
 
 	//accountID := "WDHupMjR3cR2wm97iDtKajxSPCYEEddoek"
 	//address := "miphUAzHHeM1VXGSFnw6owopsQW3jAQZAk"
 
 	//wallet, err := tw.GetWalletInfo(accountID)
 	//if err != nil {
-	//	t.Errorf("BTCBlockScanner_scanning failed unexpected error: %v\n", err)
+	//	t.Errorf("NEOBlockScanner_scanning failed unexpected error: %v\n", err)
 	//	return
 	//}
 
-	bs := NewBTCBlockScanner(tw)
+	bs := NewNEOBlockScanner(tw)
 
 	//bs.DropRechargeRecords(accountID)
 
@@ -149,7 +150,7 @@ func TestBTCBlockScanner_scanning(t *testing.T) {
 	bs.ScanBlockTask()
 }
 
-func TestBTCBlockScanner_Run(t *testing.T) {
+func TestNEOBlockScanner_Run(t *testing.T) {
 
 	var (
 		endRunning = make(chan bool, 1)
@@ -160,11 +161,11 @@ func TestBTCBlockScanner_Run(t *testing.T) {
 
 	//wallet, err := tw.GetWalletInfo(accountID)
 	//if err != nil {
-	//	t.Errorf("BTCBlockScanner_Run failed unexpected error: %v\n", err)
+	//	t.Errorf("NEOBlockScanner_Run failed unexpected error: %v\n", err)
 	//	return
 	//}
 
-	bs := NewBTCBlockScanner(tw)
+	bs := NewNEOBlockScanner(tw)
 
 	//bs.DropRechargeRecords(accountID)
 
@@ -178,7 +179,7 @@ func TestBTCBlockScanner_Run(t *testing.T) {
 
 }
 
-func TestBTCBlockScanner_ScanBlock(t *testing.T) {
+func TestNEOBlockScanner_ScanBlock(t *testing.T) {
 
 	//accountID := "WDHupMjR3cR2wm97iDtKajxSPCYEEddoek"
 	//address := "msnYsBdBXQZqYYqNNJZsjShzwCx9fJVSin"
@@ -188,7 +189,7 @@ func TestBTCBlockScanner_ScanBlock(t *testing.T) {
 	bs.ScanBlock(1384961)
 }
 
-func TestBTCBlockScanner_ExtractTransaction(t *testing.T) {
+func TestNEOBlockScanner_ExtractTransaction(t *testing.T) {
 
 	//accountID := "WDHupMjR3cR2wm97iDtKajxSPCYEEddoek"
 	//address := "msHemmfSZ3au6h9S1annGcTGrTVryRbSFV"
@@ -222,9 +223,9 @@ func TestWallet_GetRecharges(t *testing.T) {
 	//}
 }
 
-//func TestBTCBlockScanner_DropRechargeRecords(t *testing.T) {
+//func TestNEOBlockScanner_DropRechargeRecords(t *testing.T) {
 //	accountID := "W4ruoAyS5HdBMrEeeHQTBxo4XtaAixheXQ"
-//	bs := NewBTCBlockScanner(tw)
+//	bs := NewNEOBlockScanner(tw)
 //	bs.DropRechargeRecords(accountID)
 //}
 
@@ -240,8 +241,8 @@ func TestGetUnscanRecords(t *testing.T) {
 	}
 }
 
-func TestBTCBlockScanner_RescanFailedRecord(t *testing.T) {
-	bs := NewBTCBlockScanner(tw)
+func TestNEOBlockScanner_RescanFailedRecord(t *testing.T) {
+	bs := NewNEOBlockScanner(tw)
 	bs.RescanFailedRecord()
 }
 
@@ -253,9 +254,9 @@ func TestFullAddress(t *testing.T) {
 	}
 }
 
-func TestBTCBlockScanner_GetTransactionsByAddress(t *testing.T) {
+func TestNEOBlockScanner_GetTransactionsByAddress(t *testing.T) {
 	coin := openwallet.Coin{
-		Symbol:     "BTC",
+		Symbol:     "NEO",
 		IsContract: false,
 	}
 	txExtractDatas, err := tw.Blockscanner.GetTransactionsByAddress(0, 50, coin, "2N7Mh6PLX39japSF76r2MAf7wT7WKU5TdpK")
@@ -284,4 +285,42 @@ func TestGetLocalBlock(t *testing.T) {
 		return
 	}
 	log.Info("blocks = ", len(blocks))
+}
+
+func TestGetBlockTxByHeight(t *testing.T) {
+	height, err := tw.GetBlockHeight()
+	if err != nil {
+		log.Error(fmt.Sprintf("get block height throws error : %s", err.Error()))
+		return
+	}
+	block, err := tw.GetBlockByHeight(height-1, 1)
+	if err != nil {
+		log.Error(fmt.Sprintf("get block by height throws error : %s", err.Error()))
+		return
+	}
+
+	t.Logf(" \nblock height : %d \n block hash : %s \n block previous hash : %s \n block merkle root : %s",
+		block.Height, block.Hash, block.Previousblockhash, block.Merkleroot)
+}
+
+func TestGetCurrentBlockHashAndHeight(t *testing.T) {
+	height, err := tw.GetBlockHeight()
+	if err != nil {
+		t.Logf("get block count throws error : %s", err.Error())
+	}
+	t.Logf("chain block count is : %d", height)
+
+	bestBlockHash, err := tw.GetBestBlockHash()
+	if err != nil {
+		t.Logf("get chain laest block hash error : %s", err.Error())
+	}
+
+	t.Logf("chain laest block hash is : %s", bestBlockHash)
+
+	block, err := tw.GetBlock(bestBlockHash)
+	if err != nil {
+		t.Logf("get block throws error : %s", err.Error())
+	}
+
+	t.Logf(" block height : %d ", block.Height)
 }

@@ -40,19 +40,20 @@ import (
 
 const (
 	//币种
-	Symbol    = "NEO"
-	MasterKey = "Neocoin seed"
-	CurveType = owcrypt.ECC_CURVE_SECP256K1
-	Decimals  = int32(8)
+	Symbol         = "NEO"
+	MasterKey      = "Neocoin seed"
+	CurveType      = owcrypt.ECC_CURVE_SECP256R1
+	Decimals       = int32(8)
+	AssetSymbolGAS = "GAS"
+	AssetSymbolNEO = "NEO"
 )
 
 var (
-	MainNetAddressPrefix = ontologyTransaction.AddressPrefix
-	TestNetAddressPrefix = ontologyTransaction.AddressPrefix
+	MainNetAddressPrefix = btcTransaction.NEOMainnetAddressPrefix
+	TestNetAddressPrefix = btcTransaction.NEOTestnetAddressPrefix
 )
 
 type WalletConfig struct {
-
 	//币种
 	Symbol    string
 	MasterKey string
@@ -127,7 +128,6 @@ type WalletConfig struct {
 	MinFees decimal.Decimal
 	//数据目录
 	DataDir string
-
 }
 
 func NewConfig(symbol string, curveType uint32, decimals int32) *WalletConfig {
@@ -170,7 +170,7 @@ func NewConfig(symbol string, curveType uint32, decimals int32) *WalletConfig {
 	c.backupDir = filepath.Join("data", strings.ToLower(c.Symbol), "backup")
 	//钱包服务API
 	c.ServerAPI = "http://127.0.0.1:10000"
-	//钱包安装的路径
+	//钱包安装的路径e
 	c.NodeInstallPath = ""
 	//钱包数据文件目录
 	c.WalletDataPath = ""

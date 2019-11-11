@@ -40,16 +40,16 @@ func testNewWalletManager() *WalletManager {
 	wm := NewWalletManager()
 
 	//读取配置
-	absFile := filepath.Join("conf", "conf.ini")
+	absFile := filepath.Join("conf", "NEO.ini")
 	//log.Debug("absFile:", absFile)
 	c, err := config.NewConfig("ini", absFile)
 	if err != nil {
 		panic(err)
 	}
 	wm.LoadAssetsConfig(c)
-	wm.ExplorerClient.Debug = false
-	//wm.WalletClient.Debug = true
-	wm.OnmiClient.Debug = true
+	//wm.ExplorerClient.Debug = false
+	wm.WalletClient.Debug = true
+	//wm.OnmiClient.Debug = true
 	return wm
 }
 
@@ -354,15 +354,15 @@ func TestGetBlockChainInfo(t *testing.T) {
 func TestListUnspent(t *testing.T) {
 	//msHemmfSZ3au6h9S1annGcTGrTVryRbSFV
 	//mtHT3JkeKnJZCejqp6nxScxxvbW6Wn8e92
-	utxos, err := tw.ListUnspent(0, "mi9qsHKMqtrgnbxg7ifdPMk1LsFmen4xNn")
-	if err != nil {
-		t.Errorf("ListUnspent failed unexpected error: %v\n", err)
-		return
-	}
+	//utxos, err := tw.ListUnspent(0, "mi9qsHKMqtrgnbxg7ifdPMk1LsFmen4xNn")
+	//if err != nil {
+	//	t.Errorf("ListUnspent failed unexpected error: %v\n", err)
+	//	return
+	//}
 
-	for _, u := range utxos {
-		t.Logf("ListUnspent %s: %s = %s\n", u.Address, u.AccountID, u.Amount)
-	}
+	//for _, u := range utxos {
+		//t.Logf("ListUnspent %s: %s = %s\n", u.Address, u.AccountID)
+	//}
 }
 
 //func TestGetAddressesFromLocalDB(t *testing.T) {
@@ -399,7 +399,7 @@ func TestListUnspentFromLocalDB(t *testing.T) {
 	for _, u := range utxos {
 		amount, _ := decimal.NewFromString(u.Amount)
 		total = total.Add(amount)
-		t.Logf("ListUnspentFromLocalDB %v: %s = %s\n", u.HDAddress, u.AccountID, u.Amount)
+		//t.Logf("ListUnspentFromLocalDB %v: %s = %s\n", u.HDAddress, u.AccountID, u.Amount)
 	}
 	t.Logf("ListUnspentFromLocalDB total = %s\n", total.String())
 }

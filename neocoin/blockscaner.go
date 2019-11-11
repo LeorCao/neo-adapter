@@ -42,8 +42,8 @@ const (
 	RPCServerExplorer = 1 //RPC服务，insight-API
 )
 
-//BTCBlockScanner bitcoin的区块链扫描器
-type BTCBlockScanner struct {
+//NEOBlockScanner bitcoin的区块链扫描器
+type NEOBlockScanner struct {
 	*openwallet.BlockScannerBase
 
 	CurrentBlockHeight   uint64             //当前区块高度
@@ -57,7 +57,7 @@ type BTCBlockScanner struct {
 
 	//用于实现浏览器
 	IsSkipFailedBlock bool                                    //是否跳过失败区块
-	BTCBlockObservers map[BTCBlockScanNotificationObject]bool //观察者
+	NEOBlockObservers map[NEOBlockScanNotificationObject]bool //观察者
 }
 
 //ExtractResult 扫描完成的提取结果
@@ -77,9 +77,9 @@ type SaveResult struct {
 	Success     bool
 }
 
-//NewBTCBlockScanner 创建区块链扫描器
-func NewBTCBlockScanner(wm *WalletManager) *BTCBlockScanner {
-	bs := BTCBlockScanner{
+//NewNEOBlockScanner 创建区块链扫描器
+func NewNEOBlockScanner(wm *WalletManager) *NEOBlockScanner {
+	bs := NEOBlockScanner{
 		BlockScannerBase: openwallet.NewBlockScannerBase(),
 	}
 
@@ -88,7 +88,7 @@ func NewBTCBlockScanner(wm *WalletManager) *BTCBlockScanner {
 	bs.IsScanMemPool = true
 	bs.RescanLastBlockCount = 0
 	bs.stopSocketIO = make(chan struct{})
-	bs.BTCBlockObservers = make(map[BTCBlockScanNotificationObject]bool)
+	bs.NEOBlockObservers = make(map[NEOBlockScanNotificationObject]bool)
 	//bs.RPCServer = RPCServerCore
 
 	//设置扫描任务
@@ -98,7 +98,7 @@ func NewBTCBlockScanner(wm *WalletManager) *BTCBlockScanner {
 }
 
 //SetRescanBlockHeight 重置区块链扫描高度
-func (bs *BTCBlockScanner) SetRescanBlockHeight(height uint64) error {
+func (bs *NEOBlockScanner) SetRescanBlockHeight(height uint64) error {
 	height = height - 1
 	if height < 0 {
 		return errors.New("block height to rescan must greater than 0.")
@@ -115,7 +115,7 @@ func (bs *BTCBlockScanner) SetRescanBlockHeight(height uint64) error {
 }
 
 //ScanBlockTask 扫描任务
-func (bs *BTCBlockScanner) ScanBlockTask() {
+func (bs *NEOBlockScanner) ScanBlockTask() {
 
 	//获取本地区块高度
 	blockHeader, err := bs.GetScannedBlockHeader()
@@ -136,6 +136,10 @@ func (bs *BTCBlockScanner) ScanBlockTask() {
 
 		//获取最大高度
 		maxHeight, err := bs.wm.GetBlockHeight()
+		// getblockcount 接口拿到的区块数
+		// 包含了创世区块，所以要减1，
+		// 否则后面执行 getblockhash 会报错 ： [-100]Invalid Height
+		maxHeight--
 		if err != nil {
 			//下一个高度找不到会报异常
 			bs.wm.Log.Std.Info("block scanner can not get rpc-server block height; unexpected error: %v", err)
@@ -284,7 +288,7 @@ func (bs *BTCBlockScanner) ScanBlockTask() {
 }
 
 //ScanBlock 扫描指定高度区块
-func (bs *BTCBlockScanner) ScanBlock(height uint64) error {
+func (bs *NEOBlockScanner) ScanBlock(height uint64) error {
 
 	block, err := bs.scanBlock(height)
 	if err != nil {
@@ -297,7 +301,7 @@ func (bs *BTCBlockScanner) ScanBlock(height uint64) error {
 	return nil
 }
 
-func (bs *BTCBlockScanner) scanBlock(height uint64) (*Block, error) {
+func (bs *NEOBlockScanner) scanBlock(height uint64) (*Block, error) {
 
 	hash, err := bs.wm.GetBlockHash(height)
 	if err != nil {
@@ -331,7 +335,7 @@ func (bs *BTCBlockScanner) scanBlock(height uint64) (*Block, error) {
 }
 
 //ScanTxMemPool 扫描交易内存池
-func (bs *BTCBlockScanner) ScanTxMemPool() {
+func (bs *NEOBlockScanner) ScanTxMemPool() {
 
 	bs.wm.Log.Std.Info("block scanner scanning mempool ...")
 
@@ -354,7 +358,7 @@ func (bs *BTCBlockScanner) ScanTxMemPool() {
 }
 
 //rescanFailedRecord 重扫失败记录
-func (bs *BTCBlockScanner) RescanFailedRecord() {
+func (bs *NEOBlockScanner) RescanFailedRecord() {
 
 	var (
 		blockMap = make(map[uint64][]string)
@@ -423,7 +427,7 @@ func (bs *BTCBlockScanner) RescanFailedRecord() {
 }
 
 //newBlockNotify 获得新区块后，通知给观测者
-func (bs *BTCBlockScanner) newBlockNotify(block *Block, isFork bool) {
+func (bs *NEOBlockScanner) newBlockNotify(block *Block, isFork bool) {
 	header := block.BlockHeader(bs.wm.Symbol())
 	header.Fork = isFork
 	bs.NewBlockNotify(header)
@@ -431,7 +435,7 @@ func (bs *BTCBlockScanner) newBlockNotify(block *Block, isFork bool) {
 
 //BatchExtractTransaction 批量提取交易单
 //bitcoin 1M的区块链可以容纳3000笔交易，批量多线程处理，速度更快
-func (bs *BTCBlockScanner) BatchExtractTransaction(blockHeight uint64, blockHash string, txs []string) error {
+func (bs *NEOBlockScanner) BatchExtractTransaction(blockHeight uint64, blockHash string, txs []string) error {
 
 	var (
 		quit       = make(chan struct{})
@@ -526,7 +530,7 @@ func (bs *BTCBlockScanner) BatchExtractTransaction(blockHeight uint64, blockHash
 }
 
 //extractRuntime 提取运行时
-func (bs *BTCBlockScanner) extractRuntime(producer chan ExtractResult, worker chan ExtractResult, quit chan struct{}) {
+func (bs *NEOBlockScanner) extractRuntime(producer chan ExtractResult, worker chan ExtractResult, quit chan struct{}) {
 
 	var (
 		values = make([]ExtractResult, 0)
@@ -562,7 +566,7 @@ func (bs *BTCBlockScanner) extractRuntime(producer chan ExtractResult, worker ch
 }
 
 //ExtractTransaction 提取交易单
-func (bs *BTCBlockScanner) ExtractTransaction(blockHeight uint64, blockHash string, txid string, scanAddressFunc openwallet.BlockScanAddressFunc) ExtractResult {
+func (bs *NEOBlockScanner) ExtractTransaction(blockHeight uint64, blockHash string, txid string, scanAddressFunc openwallet.BlockScanAddressFunc) ExtractResult {
 
 	var (
 		result = ExtractResult{
@@ -606,28 +610,28 @@ func (bs *BTCBlockScanner) ExtractTransaction(blockHeight uint64, blockHash stri
 		bs.extractOmniTransaction(omniTrx, &result, scanAddressFunc)
 	}
 
-	////bs.wm.Log.Debug("start extractTransaction")
-	//bs.extractTransaction(trx, &result, scanAddressFunc)
-	////bs.wm.Log.Debug("end extractTransaction")
-	//
-	//if bs.wm.Config.OmniSupport {
-	//	//获取omni的交易单
-	//	omniTrx, err := bs.wm.GetOmniTransaction(txid)
-	//	if err != nil {
-	//		//bs.wm.Log.Std.Info("block scanner can not extract omni transaction data; unexpected error: %v", err)
-	//		result.Success = true
-	//		return result
-	//	}
-	//
-	//	bs.extractOmniTransaction(omniTrx, &result, scanAddressFunc)
-	//}
+	/*//bs.wm.Log.Debug("start extractTransaction")
+	bs.extractTransaction(trx, &result, scanAddressFunc)
+	//bs.wm.Log.Debug("end extractTransaction")
+
+	if bs.wm.Config.OmniSupport {
+		//获取omni的交易单
+		omniTrx, err := bs.wm.GetOmniTransaction(txid)
+		if err != nil {
+			//bs.wm.Log.Std.Info("block scanner can not extract omni transaction data; unexpected error: %v", err)
+			result.Success = true
+			return result
+		}
+
+		bs.extractOmniTransaction(omniTrx, &result, scanAddressFunc)
+	}*/
 
 	return result
 
 }
 
 //extractOmniTransaction 提取Omni交易单
-func (bs *BTCBlockScanner) extractOmniTransaction(trx *OmniTransaction, result *ExtractResult, scanAddressFunc openwallet.BlockScanAddressFunc) {
+func (bs *NEOBlockScanner) extractOmniTransaction(trx *OmniTransaction, result *ExtractResult, scanAddressFunc openwallet.BlockScanAddressFunc) {
 
 	var (
 		success = true
@@ -748,7 +752,7 @@ func (bs *BTCBlockScanner) extractOmniTransaction(trx *OmniTransaction, result *
 }
 
 //ExtractTransactionData 提取交易单
-func (bs *BTCBlockScanner) extractTransaction(trx *Transaction, result *ExtractResult, scanAddressFunc openwallet.BlockScanAddressFunc) {
+func (bs *NEOBlockScanner) extractTransaction(trx *Transaction, result *ExtractResult, scanAddressFunc openwallet.BlockScanAddressFunc) {
 
 	var (
 		success = true
@@ -808,11 +812,11 @@ func (bs *BTCBlockScanner) extractTransaction(trx *Transaction, result *ExtractR
 
 			//提取出账部分记录
 			from, totalSpent := bs.extractTxInput(trx, result, scanAddressFunc)
-			//bs.wm.Log.Debug("from:", from, "totalSpent:", totalSpent)
+			bs.wm.Log.Debug("from:", from, "totalSpent:", totalSpent)
 
 			//提取入账部分记录
 			to, totalReceived := bs.extractTxOutput(trx, result, scanAddressFunc)
-			//bs.wm.Log.Debug("to:", to, "totalReceived:", totalReceived)
+			bs.wm.Log.Debug("to:", to, "totalReceived:", totalReceived)
 
 			for _, extractData := range result.extractData {
 				tx := &openwallet.Transaction{
@@ -835,7 +839,7 @@ func (bs *BTCBlockScanner) extractTransaction(trx *Transaction, result *ExtractR
 				tx.WxID = wxID
 				extractData.Transaction = tx
 
-				//bs.wm.Log.Debug("Transaction:", extractData.Transaction)
+				bs.wm.Log.Debug("Transaction:", extractData.Transaction)
 			}
 
 		}
@@ -847,7 +851,7 @@ func (bs *BTCBlockScanner) extractTransaction(trx *Transaction, result *ExtractR
 }
 
 //ExtractTxInput 提取交易单输入部分
-func (bs *BTCBlockScanner) extractTxInput(trx *Transaction, result *ExtractResult, scanAddressFunc openwallet.BlockScanAddressFunc) ([]string, decimal.Decimal) {
+func (bs *NEOBlockScanner) extractTxInput(trx *Transaction, result *ExtractResult, scanAddressFunc openwallet.BlockScanAddressFunc) ([]string, decimal.Decimal) {
 
 	//vin := trx.Get("vin")
 
@@ -919,7 +923,7 @@ func (bs *BTCBlockScanner) extractTxInput(trx *Transaction, result *ExtractResul
 }
 
 //ExtractTxInput 提取交易单输入部分
-func (bs *BTCBlockScanner) extractTxOutput(trx *Transaction, result *ExtractResult, scanAddressFunc openwallet.BlockScanAddressFunc) ([]string, decimal.Decimal) {
+func (bs *NEOBlockScanner) extractTxOutput(trx *Transaction, result *ExtractResult, scanAddressFunc openwallet.BlockScanAddressFunc) ([]string, decimal.Decimal) {
 
 	var (
 		to          = make([]string, 0)
@@ -992,7 +996,7 @@ func (bs *BTCBlockScanner) extractTxOutput(trx *Transaction, result *ExtractResu
 }
 
 //newExtractDataNotify 发送通知
-func (bs *BTCBlockScanner) newExtractDataNotify(height uint64, extractData map[string]*openwallet.TxExtractData) error {
+func (bs *NEOBlockScanner) newExtractDataNotify(height uint64, extractData map[string]*openwallet.TxExtractData) error {
 
 	for o, _ := range bs.Observers {
 		for key, data := range extractData {
@@ -1045,7 +1049,7 @@ func (wm *WalletManager) DeleteUnscanRecordNotFindTX() error {
 }
 
 //SaveRechargeToWalletDB 保存交易单内的充值记录到钱包数据库
-//func (bs *BTCBlockScanner) SaveRechargeToWalletDB(height uint64, list []*openwallet.Recharge) error {
+//func (bs *NEOBlockScanner) SaveRechargeToWalletDB(height uint64, list []*openwallet.Recharge) error {
 //
 //	for _, r := range list {
 //
@@ -1084,7 +1088,7 @@ func (wm *WalletManager) DeleteUnscanRecordNotFindTX() error {
 //}
 
 //GetScannedBlockHeader 获取当前扫描的区块头
-func (bs *BTCBlockScanner) GetScannedBlockHeader() (*openwallet.BlockHeader, error) {
+func (bs *NEOBlockScanner) GetScannedBlockHeader() (*openwallet.BlockHeader, error) {
 
 	var (
 		blockHeight uint64 = 0
@@ -1115,7 +1119,7 @@ func (bs *BTCBlockScanner) GetScannedBlockHeader() (*openwallet.BlockHeader, err
 }
 
 //GetCurrentBlockHeader 获取当前区块高度
-func (bs *BTCBlockScanner) GetCurrentBlockHeader() (*openwallet.BlockHeader, error) {
+func (bs *NEOBlockScanner) GetCurrentBlockHeader() (*openwallet.BlockHeader, error) {
 
 	var (
 		blockHeight uint64 = 0
@@ -1137,7 +1141,7 @@ func (bs *BTCBlockScanner) GetCurrentBlockHeader() (*openwallet.BlockHeader, err
 	return &openwallet.BlockHeader{Height: blockHeight, Hash: hash}, nil
 }
 
-func (bs *BTCBlockScanner) GetGlobalMaxBlockHeight() uint64 {
+func (bs *NEOBlockScanner) GetGlobalMaxBlockHeight() uint64 {
 	maxHeight, err := bs.wm.GetBlockHeight()
 	if err != nil {
 		bs.wm.Log.Std.Info("get global max block height error;unexpected error:%v", err)
@@ -1147,12 +1151,12 @@ func (bs *BTCBlockScanner) GetGlobalMaxBlockHeight() uint64 {
 }
 
 //GetScannedBlockHeight 获取已扫区块高度
-func (bs *BTCBlockScanner) GetScannedBlockHeight() uint64 {
+func (bs *NEOBlockScanner) GetScannedBlockHeight() uint64 {
 	localHeight, _ := bs.wm.GetLocalNewBlock()
 	return localHeight
 }
 
-func (bs *BTCBlockScanner) ExtractTransactionData(txid string, scanTargetFunc openwallet.BlockScanTargetFunc) (map[string][]*openwallet.TxExtractData, error) {
+func (bs *NEOBlockScanner) ExtractTransactionData(txid string, scanTargetFunc openwallet.BlockScanTargetFunc) (map[string][]*openwallet.TxExtractData, error) {
 
 	scanAddressFunc := func(address string) (string, bool) {
 		target := openwallet.ScanTarget{
@@ -1178,7 +1182,7 @@ func (bs *BTCBlockScanner) ExtractTransactionData(txid string, scanTargetFunc op
 }
 
 //DropRechargeRecords 清楚钱包的全部充值记录
-//func (bs *BTCBlockScanner) DropRechargeRecords(accountID string) error {
+//func (bs *NEOBlockScanner) DropRechargeRecords(accountID string) error {
 //	bs.mu.RLock()
 //	defer bs.mu.RUnlock()
 //
@@ -1192,7 +1196,7 @@ func (bs *BTCBlockScanner) ExtractTransactionData(txid string, scanTargetFunc op
 //}
 
 //DeleteRechargesByHeight 删除某区块高度的充值记录
-//func (bs *BTCBlockScanner) DeleteRechargesByHeight(height uint64) error {
+//func (bs *NEOBlockScanner) DeleteRechargesByHeight(height uint64) error {
 //
 //	bs.mu.RLock()
 //	defer bs.mu.RUnlock()
@@ -1230,7 +1234,7 @@ func (bs *BTCBlockScanner) ExtractTransactionData(txid string, scanTargetFunc op
 //}
 
 //SaveTxToWalletDB 保存交易记录到钱包数据库
-func (bs *BTCBlockScanner) SaveUnscanRecord(record *UnscanRecord) error {
+func (bs *NEOBlockScanner) SaveUnscanRecord(record *UnscanRecord) error {
 
 	if record == nil {
 		return errors.New("the unscan record to save is nil")
@@ -1252,7 +1256,7 @@ func (bs *BTCBlockScanner) SaveUnscanRecord(record *UnscanRecord) error {
 }
 
 //GetWalletByAddress 获取地址对应的钱包
-//func (bs *BTCBlockScanner) GetWalletByAddress(address string) (*openwallet.Wallet, bool) {
+//func (bs *NEOBlockScanner) GetWalletByAddress(address string) (*openwallet.Wallet, bool) {
 //	bs.mu.RLock()
 //	defer bs.mu.RUnlock()
 //
@@ -1279,7 +1283,7 @@ func (wm *WalletManager) GetBlockHeight() (uint64, error) {
 //getBlockHeightByCore 获取区块链高度
 func (wm *WalletManager) getBlockHeightByCore() (uint64, error) {
 
-	result, err := wm.WalletClient.Call("getblockcount", nil)
+	result, err := wm.WalletClient.Call("getblockcount", []interface{}{})
 	if err != nil {
 		return 0, err
 	}
@@ -1353,6 +1357,7 @@ func (wm *WalletManager) getBlockHashByCore(height uint64) (string, error) {
 
 	result, err := wm.WalletClient.Call("getblockhash", request)
 	if err != nil {
+		fmt.Println(fmt.Sprintf("current height : %d, error : %s", height, err.Error()))
 		return "", err
 	}
 
@@ -1395,6 +1400,7 @@ func (wm *WalletManager) getBlockByCore(hash string, format ...uint64) (*Block, 
 
 	request := []interface{}{
 		hash,
+		"1",
 	}
 
 	if len(format) > 0 {
@@ -1426,7 +1432,9 @@ func (wm *WalletManager) getTxIDsInMemPoolByCore() ([]string, error) {
 		txids = make([]string, 0)
 	)
 
-	result, err := wm.WalletClient.Call("getrawmempool", nil)
+	request := []interface{}{}
+
+	result, err := wm.WalletClient.Call("getrawmempool", request)
 	if err != nil {
 		return nil, err
 	}
@@ -1568,13 +1576,13 @@ func (wm *WalletManager) DeleteUnscanRecord(height uint64) error {
 }
 
 //GetAssetsAccountBalanceByAddress 查询账户相关地址的交易记录
-func (bs *BTCBlockScanner) GetBalanceByAddress(address ...string) ([]*openwallet.Balance, error) {
+func (bs *NEOBlockScanner) GetBalanceByAddress(address ...string) ([]*openwallet.Balance, error) {
 
 	//if bs.wm.Config.RPCServerType != RPCServerExplorer {
 	//	return nil, nil
 	//}
 
-	//addrsBalance := make([]*openwallet.Balance, 0)
+	//addrsBalance := make([]*openwallet.UnspentBalance, 0)
 	//
 	//for _, a := range address {
 	//	balance, err := bs.wm.getBalanceByExplorer(a)
@@ -1623,7 +1631,7 @@ func (wm *WalletManager) getBalanceCalUnspent(address ...string) ([]*openwallet.
 }
 
 //calculateUnspentByExplorer 通过未花计算余额
-func (wm *WalletManager) calculateUnspent(utxos []*Unspent) map[string]*openwallet.Balance {
+func (wm *WalletManager) calculateUnspent(utxos []*UnspentBalance) map[string]*openwallet.Balance {
 
 	addrBalanceMap := make(map[string]*openwallet.Balance)
 
@@ -1634,24 +1642,13 @@ func (wm *WalletManager) calculateUnspent(utxos []*Unspent) map[string]*openwall
 			obj = &openwallet.Balance{}
 		}
 
-		tu, _ := decimal.NewFromString(obj.UnconfirmBalance)
-		tb, _ := decimal.NewFromString(obj.ConfirmBalance)
-
-		if utxo.Spendable {
-			if utxo.Confirmations > 0 {
-				b, _ := decimal.NewFromString(utxo.Amount)
-				tb = tb.Add(b)
-			} else {
-				u, _ := decimal.NewFromString(utxo.Amount)
-				tu = tu.Add(u)
-			}
-		}
-
 		obj.Symbol = wm.Symbol()
 		obj.Address = utxo.Address
-		obj.ConfirmBalance = tb.String()
-		obj.UnconfirmBalance = tu.String()
-		obj.Balance = tb.Add(tu).String()
+		if nil != utxo.NEOUnspent {
+			obj.Balance = utxo.NEOUnspent.Amount
+		} else {
+			obj.Balance = "0"
+		}
 
 		addrBalanceMap[utxo.Address] = obj
 	}
@@ -1661,7 +1658,7 @@ func (wm *WalletManager) calculateUnspent(utxos []*Unspent) map[string]*openwall
 }
 
 //GetAssetsAccountTransactionsByAddress 查询账户相关地址的交易记录
-func (bs *BTCBlockScanner) GetTransactionsByAddress(offset, limit int, coin openwallet.Coin, address ...string) ([]*openwallet.TxExtractData, error) {
+func (bs *NEOBlockScanner) GetTransactionsByAddress(offset, limit int, coin openwallet.Coin, address ...string) ([]*openwallet.TxExtractData, error) {
 
 	var (
 		array = make([]*openwallet.TxExtractData, 0)
@@ -1706,7 +1703,7 @@ func (bs *BTCBlockScanner) GetTransactionsByAddress(offset, limit int, coin open
 }
 
 //Run 运行
-func (bs *BTCBlockScanner) Run() error {
+func (bs *NEOBlockScanner) Run() error {
 
 	//使用浏览器，开启socketIO监听内存池交易
 	if bs.wm.Config.RPCServerType == RPCServerExplorer {
@@ -1721,7 +1718,7 @@ func (bs *BTCBlockScanner) Run() error {
 }
 
 ////Stop 停止扫描
-func (bs *BTCBlockScanner) Stop() error {
+func (bs *NEOBlockScanner) Stop() error {
 
 	if bs.socketIO != nil {
 		bs.socketIO.Close()
@@ -1737,7 +1734,7 @@ func (bs *BTCBlockScanner) Stop() error {
 
 //
 ////Pause 暂停扫描
-//func (bs *BTCBlockScanner) Pause() error {
+//func (bs *NEOBlockScanner) Pause() error {
 //	if bs.wm.Config.RPCServerType == RPCServerExplorer {
 //		return nil
 //	} else {
@@ -1747,7 +1744,7 @@ func (bs *BTCBlockScanner) Stop() error {
 //}
 //
 ////Restart 继续扫描
-//func (bs *BTCBlockScanner) Restart() error {
+//func (bs *NEOBlockScanner) Restart() error {
 //	if bs.wm.Config.RPCServerType == RPCServerExplorer {
 //		return nil
 //	} else {
@@ -1758,7 +1755,7 @@ func (bs *BTCBlockScanner) Stop() error {
 
 /******************* 使用insight socket.io 监听区块 *******************/
 
-func (bs *BTCBlockScanner) connectSocketIO(disconnected chan struct{}) (*gosocketio.Client, error) {
+func (bs *NEOBlockScanner) connectSocketIO(disconnected chan struct{}) (*gosocketio.Client, error) {
 
 	var (
 		room = "inv"
@@ -1840,7 +1837,7 @@ func (bs *BTCBlockScanner) connectSocketIO(disconnected chan struct{}) (*gosocke
 }
 
 //setupSocketIO 配置socketIO监听新区块
-func (bs *BTCBlockScanner) setupSocketIO() error {
+func (bs *NEOBlockScanner) setupSocketIO() error {
 
 	bs.wm.Log.Info("block scanner use socketIO to listen new data")
 
@@ -1892,4 +1889,39 @@ func (bs *BTCBlockScanner) setupSocketIO() error {
 	}
 
 	return nil
+}
+
+// GetBlockByHeight 获取指定区块高度的区块信息
+func (wm *WalletManager) GetBlockByHeight(height uint64, format ...interface{}) (*Block, error) {
+	return wm.getBlockByHeightOnCore(height, format)
+}
+
+func (wm *WalletManager) getBlockByHeightOnCore(height uint64, format ...interface{}) (*Block, error) {
+	request := []interface{}{
+		height,
+	}
+
+	if len(format) > 0 {
+		request = append(request, format...)
+	}
+
+	result, err := wm.WalletClient.Call("getblock", request)
+	if err != nil {
+		return nil, err
+	}
+
+	return wm.NewBlock(result), nil
+}
+
+// GetBestBlockHash 获取主链中高度最大的区块的hash
+func (wm *WalletManager) GetBestBlockHash() (string, error) {
+	return wm.getBestBlockHash()
+}
+
+func (wm *WalletManager) getBestBlockHash() (string, error) {
+	result, err := wm.WalletClient.Call("getbestblockhash", []interface{}{})
+	if err != nil {
+		return "", err
+	}
+	return result.String(), nil
 }

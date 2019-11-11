@@ -10,7 +10,7 @@ type btcBlockObserver struct {
 }
 
 //BlockScanNotify 新区块扫描完成通知
-func (o *btcBlockObserver) BTCBlockScanNotify(block *Block, txs []*Transaction) error {
+func (o *btcBlockObserver) NEOBlockScanNotify(block *Block, txs []*Transaction) error {
 	log.Std.Notice("block height: %+v", block.Height)
 	log.Std.Notice("block hash: %+v", block.Hash)
 	for _, tx := range txs {
@@ -21,7 +21,7 @@ func (o *btcBlockObserver) BTCBlockScanNotify(block *Block, txs []*Transaction) 
 
 func TestBTCBlockScanner_ScanBlockTaskOrigin(t *testing.T) {
 
-	bs := NewBTCBlockScanner(tw)
+	bs := NewNEOBlockScanner(tw)
 	o := &btcBlockObserver{}
 	bs.AddBTCBlockObserver(o)
 
