@@ -1176,8 +1176,8 @@ func (wm *WalletManager) BuildTransaction(utxos []*Unspent, to []string, change 
 	//		totalAmount = totalAmount.Add(ua)
 	//
 	//		inputs = append(inputs, map[string]interface{}{
-	//			"txid": u.TxID,
-	//			"vout": u.Vout,
+	//			"txid": u.txID,
+	//			"vout": u.vout,
 	//		})
 	//	}
 	//

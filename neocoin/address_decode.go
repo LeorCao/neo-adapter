@@ -55,9 +55,9 @@ func NewAddressDecoder(wm *WalletManager) *addressDecoder {
 //PrivateKeyToWIF 私钥转WIF
 func (decoder *addressDecoder) PrivateKeyToWIF(priv []byte, isTestnet bool) (string, error) {
 
-	cfg := addressEncoder.NEO_mainnetPrivateWIFCompressed
+	cfg := NEO_mainnetPrivateWIFCompressed
 	if decoder.wm.Config.IsTestNet {
-		cfg = addressEncoder.NEO_testnetPrivateWIFCompressed
+		cfg = NEO_testnetPrivateWIFCompressed
 	}
 
 	//privateKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), priv)
@@ -75,9 +75,9 @@ func (decoder *addressDecoder) PrivateKeyToWIF(priv []byte, isTestnet bool) (str
 //PublicKeyToAddress 公钥转地址
 func (decoder *addressDecoder) PublicKeyToAddress(pub []byte, isTestnet bool) (string, error) {
 
-	cfg := addressEncoder.NEO_mainnetAddressP2PKH
+	cfg := NEO_mainnetAddressP2PKH
 	if decoder.wm.Config.IsTestNet {
-		cfg = addressEncoder.NEO_testnetAddressP2PKH
+		cfg = NEO_testnetAddressP2PKH
 	}
 
 	//pkHash := btcutil.Hash160(pub)
@@ -90,7 +90,6 @@ func (decoder *addressDecoder) PublicKeyToAddress(pub []byte, isTestnet bool) (s
 	pub = append(pub, 0xac)
 
 	sha256result := owcrypt.Hash(pub, 0, owcrypt.HASH_ALG_SHA256)
-
 	pkHash := owcrypt.Hash(sha256result, 0, owcrypt.HASH_ALG_RIPEMD160)
 
 	//pkHash := owcrypt.Hash(pub, 0, owcrypt.HASH_ALG_HASH160)

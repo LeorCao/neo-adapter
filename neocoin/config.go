@@ -17,6 +17,8 @@ package neocoin
 
 import (
 	"fmt"
+	"github.com/LeorCao/neo-adapter/neoTransaction"
+	"github.com/blocktree/go-owcdrivers/addressEncoder"
 	"github.com/blocktree/go-owcdrivers/btcTransaction"
 	"path/filepath"
 	"strings"
@@ -40,17 +42,28 @@ import (
 
 const (
 	//币种
-	Symbol         = "NEO"
-	MasterKey      = "Neocoin seed"
-	CurveType      = owcrypt.ECC_CURVE_SECP256R1
-	Decimals       = int32(8)
-	AssetSymbolGAS = "GAS"
-	AssetSymbolNEO = "NEO"
+	Symbol    = "NEO"
+	MasterKey = "Neocoin seed"
+	CurveType = owcrypt.ECC_CURVE_SECP256R1
+	Decimals  = int32(8)
+	
+	AssetSymbolGAS = "GAS" // UTXO 中的 GAS 符号
+	AssetSymbolNEO = "NEO" // UTXO 中的 NEO 符号
+
 )
 
+// 将交易地址前缀信息移到适配器中
 var (
-	MainNetAddressPrefix = btcTransaction.NEOMainnetAddressPrefix
-	TestNetAddressPrefix = btcTransaction.NEOTestnetAddressPrefix
+	MainNetAddressPrefix = btcTransaction.AddressPrefix{[]byte{0x17}, nil, nil, "neo"}
+	TestNetAddressPrefix = btcTransaction.AddressPrefix{[]byte{0x17}, nil, nil, "neo"}
+)
+
+// 将地址解析配置信息移入适配器中
+var (
+	NEO_mainnetAddressP2PKH         = addressEncoder.AddressType{"base58", addressEncoder.BTCAlphabet, "doubleSHA256", "h160", 20, []byte{0x17}, nil}
+	NEO_mainnetPrivateWIFCompressed = addressEncoder.AddressType{"base58", addressEncoder.BTCAlphabet, "doubleSHA256", "", 32, []byte{0x80}, []byte{0x01}}
+	NEO_testnetAddressP2PKH         = addressEncoder.AddressType{"base58", addressEncoder.BTCAlphabet, "doubleSHA256", "h160", 20, []byte{0x17}, nil}
+	NEO_testnetPrivateWIFCompressed = addressEncoder.AddressType{"base58", addressEncoder.BTCAlphabet, "doubleSHA256", "", 32, []byte{0x80}, []byte{0x01}}
 )
 
 type WalletConfig struct {
@@ -119,9 +132,9 @@ type WalletConfig struct {
 	//是否支持omni
 	OmniSupport bool
 	//主网地址前缀
-	MainNetAddressPrefix btcTransaction.AddressPrefix
+	MainNetAddressPrefix neoTransaction.AddressPrefix
 	//测试网地址前缀
-	TestNetAddressPrefix btcTransaction.AddressPrefix
+	TestNetAddressPrefix neoTransaction.AddressPrefix
 	//小数位精度
 	Decimals int32
 	//最低手续费

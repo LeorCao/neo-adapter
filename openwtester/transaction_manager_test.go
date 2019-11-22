@@ -86,15 +86,14 @@ func TestWalletManager_ExtractUTXO(t *testing.T) {
 func TestWalletManager_GetTransactionByWxID(t *testing.T) {
 	tm := testInitWalletManager()
 	wxID := openwallet.GenTransactionWxID(&openwallet.Transaction{
-		TxID: "bfa6febb33c8ddde9f7f7b4d93043956cce7e0f4e95da259a78dc9068d178fee",
+		TxID: "d752a65dafbbf7379f5c6cf6c63f3cc3254fecaed23ed575b2f2002fbcf91670",
 		Coin: openwallet.Coin{
-			Symbol:     "LTC",
+			Symbol:     "NEO",
 			IsContract: false,
 			ContractID: "",
 		},
 	})
 	log.Info("wxID:", wxID)
-	//"D0+rxcKSqEsFMfGesVzBdf6RloM="
 	tx, err := tm.GetTransactionByWxID(testApp, wxID)
 	if err != nil {
 		log.Error("GetTransactionByTxID failed, unexpected error:", err)
@@ -105,10 +104,8 @@ func TestWalletManager_GetTransactionByWxID(t *testing.T) {
 
 func TestWalletManager_GetAssetsAccountBalance(t *testing.T) {
 	tm := testInitWalletManager()
-	walletID := "W7tue6SDce38fPwerdKqyebUh6yo2nTQLC"
-	accountID := "FqQBQ8Bn26GogR7UAu6e2ZVhrYYmKUpmBS7CSM1KLTTZ"
-	//walletID := "WAmTnvPKMWpJBqKk6cncFG3mTXz3iPmtzV"
-	//accountID := "21Vn4NEmXT6DRy2EfdPTAJCS2kYTACTuconBer8AQ1cz"
+	walletID := "W6Nn49fdc7EoAYrYA5dSNNPKdxEfbroYgq"
+	accountID := "4yPPaaoZKVpVp2eFtt5KMuTkzAf4UtbzVKQsnGzs8mRU"
 
 	balance, err := tm.GetAssetsAccountBalance(testApp, walletID, accountID)
 	if err != nil {
@@ -121,11 +118,7 @@ func TestWalletManager_GetAssetsAccountBalance(t *testing.T) {
 func TestWalletManager_GetAssetsAccountTokenBalance(t *testing.T) {
 	tm := testInitWalletManager()
 	walletID := "W7tue6SDce38fPwerdKqyebUh6yo2nTQLC"
-	//accountID := "FqQBQ8Bn26GogR7UAu6e2ZVhrYYmKUpmBS7CSM1KLTTZ"
 	accountID := "EPxkNBu6iMospC6aHQppv36UGY4mb1WqUE7oNZ7Xp9Df"
-
-	//walletID := "WAmTnvPKMWpJBqKk6cncFG3mTXz3iPmtzV"
-	//accountID := "21Vn4NEmXT6DRy2EfdPTAJCS2kYTACTuconBer8AQ1cz"
 
 	contract := openwallet.SmartContract{
 		Address:  "2",
@@ -158,7 +151,7 @@ func TestWalletManager_GetEstimateFeeRate(t *testing.T) {
 }
 
 func TestGetAddressBalance(t *testing.T) {
-	symbol := "BTC"
+	symbol := "NEO"
 	assetsMgr, err := openw.GetAssetsAdapter(symbol)
 	if err != nil {
 		log.Error(symbol, "is not support")
@@ -175,7 +168,7 @@ func TestGetAddressBalance(t *testing.T) {
 	bs := assetsMgr.GetBlockScanner()
 
 	addrs := []string{
-		"12kSR8J11Q1d8JiYwZn7DZsPoDoptME35y",
+		"AXXYzk1kn9Bj8PHeqha921gqCpwJNRmuHC",
 	}
 
 	balances, err := bs.GetBalanceByAddress(addrs...)

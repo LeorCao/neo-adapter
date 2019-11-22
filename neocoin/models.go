@@ -175,8 +175,8 @@ func NewUnspentTxs(json []gjson.Result) *[]UnspentTx {
 }
 
 type UnspentSort struct {
-	Values     []*Unspent
-	Comparator func(a, b *Unspent) int
+	Values     []*UnspentBalance
+	Comparator func(a, b *UnspentBalance) int
 }
 
 func (s UnspentSort) Len() int {

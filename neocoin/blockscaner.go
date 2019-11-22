@@ -671,7 +671,7 @@ func (bs *NEOBlockScanner) extractOmniTransaction(trx *OmniTransaction, result *
 				input.Coin = coin
 				input.Index = 0
 				input.Sid = openwallet.GenTxInputSID(trx.TxID, bs.wm.Symbol(), contractId, 0)
-				//input.Sid = base64.StdEncoding.EncodeToString(crypto.SHA1([]byte(fmt.Sprintf("input_%s_%d_%s", result.TxID, i, addr))))
+				//input.Sid = base64.StdEncoding.EncodeToString(crypto.SHA1([]byte(fmt.Sprintf("input_%s_%d_%s", result.txID, i, addr))))
 				input.CreateAt = createAt
 				//在哪个区块高度时消费
 				input.BlockHeight = trx.Block
@@ -701,7 +701,7 @@ func (bs *NEOBlockScanner) extractOmniTransaction(trx *OmniTransaction, result *
 				output.Coin = coin
 				output.Index = 0
 				output.Sid = openwallet.GenTxOutPutSID(trx.TxID, bs.wm.Symbol(), contractId, 0)
-				//input.Sid = base64.StdEncoding.EncodeToString(crypto.SHA1([]byte(fmt.Sprintf("input_%s_%d_%s", result.TxID, i, addr))))
+				//input.Sid = base64.StdEncoding.EncodeToString(crypto.SHA1([]byte(fmt.Sprintf("input_%s_%d_%s", result.txID, i, addr))))
 				output.CreateAt = createAt
 				//在哪个区块高度时消费
 				output.BlockHeight = trx.Block
@@ -798,9 +798,7 @@ func (bs *NEOBlockScanner) extractTransaction(trx *Transaction, result *ExtractR
 						input.Value = preOut.Value
 						//vinout = append(vinout, output[vout])
 						success = true
-
 						//bs.wm.Log.Debug("GetTxOut:", output[vout])
-
 					}
 				}
 
@@ -895,7 +893,7 @@ func (bs *NEOBlockScanner) extractTxInput(trx *Transaction, result *ExtractResul
 			}
 			input.Index = output.N
 			input.Sid = openwallet.GenTxInputSID(txid, bs.wm.Symbol(), "", uint64(i))
-			//input.Sid = base64.StdEncoding.EncodeToString(crypto.SHA1([]byte(fmt.Sprintf("input_%s_%d_%s", result.TxID, i, addr))))
+			//input.Sid = base64.StdEncoding.EncodeToString(crypto.SHA1([]byte(fmt.Sprintf("input_%s_%d_%s", result.txID, i, addr))))
 			input.CreateAt = createAt
 			//在哪个区块高度时消费
 			input.BlockHeight = trx.BlockHeight
@@ -1069,14 +1067,14 @@ func (wm *WalletManager) DeleteUnscanRecordNotFindTX() error {
 //			if err != nil || len(r.BlockHash) == 0 {
 //
 //				//记录未扫区块
-//				unscanRecord := NewUnscanRecord(height, r.TxID, "save to wallet failed.")
+//				unscanRecord := NewUnscanRecord(height, r.txID, "save to wallet failed.")
 //				err = bs.SaveUnscanRecord(unscanRecord)
 //				if err != nil {
-//					bs.wm.Log.Std.Error("block height: %d, txID: %s save unscan record failed. unexpected error: %v", height, r.TxID, err.Error())
+//					bs.wm.Log.Std.Error("block height: %d, txID: %s save unscan record failed. unexpected error: %v", height, r.txID, err.Error())
 //				}
 //
 //			} else {
-//				bs.wm.Log.Info("block scanner save blockHeight:", height, "txid:", r.TxID, "address:", r.Address, "successfully.")
+//				bs.wm.Log.Info("block scanner save blockHeight:", height, "txid:", r.txID, "address:", r.Address, "successfully.")
 //			}
 //		} else {
 //			return errors.New("address in wallet is not found")

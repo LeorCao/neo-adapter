@@ -94,8 +94,8 @@ func TestGetTransaction(t *testing.T) {
 	t.Logf("========= vins ========= \n")
 
 	for i, vin := range raw.Vins {
-		t.Logf("TxID[%d] = %v \n", i, vin.TxID)
-		t.Logf("Vout[%d] = %v \n", i, vin.Vout)
+		t.Logf("txID[%d] = %v \n", i, vin.TxID)
+		t.Logf("vout[%d] = %v \n", i, vin.Vout)
 		t.Logf("Addr[%d] = %v \n", i, vin.Addr)
 		t.Logf("Value[%d] = %v \n", i, vin.Value)
 	}

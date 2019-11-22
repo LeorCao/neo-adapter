@@ -23,30 +23,47 @@ import (
 )
 
 func TestAddressDecoder_Encode(t *testing.T) {
-	hash, _ := hex.DecodeString("e18b4a9b86c2fd36a5300e6ed9a6f901b3271b19")
 
-	cfg := addressEncoder.BTC_mainnetAddressP2PKH
+	expResult := "ANYZ11AmUfwiZFLbAWHoExFyBuqgLmfz88"
+
+	hash, _ := hex.DecodeString("4a43e85f3e0137a23998cdc6dbacfac0268bf038")
+
+	cfg := NEO_mainnetAddressP2PKH
 
 	addr := addressEncoder.AddressEncode(hash, cfg)
 
-	t.Logf("addr: %s", addr)
+	if addr != expResult {
+		t.Logf("addr encode error : expected result is : %s, but real result is : %s", expResult, addr)
+	} else {
+		t.Logf("addr: %s", addr)
+	}
+
 }
 
 func TestAddressDecoder_Decode(t *testing.T) {
 
-	addr := "1BhPgfzoNqoUeWniegWhgbqPuf9vnCrVGH"
+	expResult := "4a43e85f3e0137a23998cdc6dbacfac0268bf038"
 
-	cfg := addressEncoder.BTC_mainnetAddressP2PKH
+	addr := "ANYZ11AmUfwiZFLbAWHoExFyBuqgLmfz88"
+
+	cfg := NEO_mainnetAddressP2PKH
 
 	hash, _ := addressEncoder.AddressDecode(addr, cfg)
 
-	t.Logf("hash: %s", hex.EncodeToString(hash))
+	realResult := hex.EncodeToString(hash)
+
+	if realResult != expResult {
+		t.Logf("addr decode error : expected result is : %s, but real result is : %s", expResult, realResult)
+	} else {
+		t.Logf("hash: %s", hex.EncodeToString(hash))
+	}
+
 }
 
 func TestAddressDecoder_PublicKeyToAddress(t *testing.T) {
-	addr := "tb1q08djg7ea5h27x0srvqzezxungx5dzdnk3gqpa8mmsmzjzyc4u0ssjvtktm"
+	addr := "031a6c6fbbdf02ca351745fa86b9ba5a9452d785ac4f7fc2b7548ca2a46c4fcf4a"
 
-	cfg := addressEncoder.BTC_testnetAddressBech32V0
+	cfg := NEO_mainnetAddressP2PKH
 
 	hash, err := addressEncoder.AddressDecode(addr, cfg)
 	if err != nil {
@@ -71,29 +88,39 @@ func TestAddressDecoder_ScriptPubKeyToBech32Address(t *testing.T) {
 }
 
 func TestAddressDecoder_WIFToP2WPKH_nested_in_P2SH(t *testing.T) {
-	wif := "KwFE3SQqgADPAwkWc2A15Wh68rg7Xn2oAa9rwCF2pCb7KFKru4Mo"
+	wif := "KxDgvEKzgSBPPfuVfw67oPQBSjidEiqTHURKSDL1R7yGaGYAeYnr"
 
-	privkey, err := addressEncoder.AddressDecode(wif, addressEncoder.BTC_mainnetPrivateWIFCompressed)
+	priv := "1dd37fba80fec4e6a6f13fd708d8dcb3b29def768017052f6c930fa1c5d90bbb"
+	pub := "031a6c6fbbdf02ca351745fa86b9ba5a9452d785ac4f7fc2b7548ca2a46c4fcf4a"
+
+	privkey, err := addressEncoder.AddressDecode(wif, NEO_mainnetPrivateWIFCompressed)
 	if err != nil {
 		t.Errorf("AddressDecode failed unexpected error: %v\n", err)
 		return
 	}
+	if priv != hex.EncodeToString(privkey) {
+		t.Failed()
+	}
 	t.Logf("privkey: %s", hex.EncodeToString(privkey))
 
-	pubkey, _ := owcrypt.GenPubkey(privkey, owcrypt.ECC_CURVE_SECP256K1)
-	pubkey = owcrypt.PointCompress(pubkey, owcrypt.ECC_CURVE_SECP256K1)
+	pubkey, _ := owcrypt.GenPubkey(privkey, owcrypt.ECC_CURVE_SECP256R1)
+	pubkey = owcrypt.PointCompress(pubkey, owcrypt.ECC_CURVE_SECP256R1)
+
+	if pub != hex.EncodeToString(pubkey) {
+		t.Failed()
+	}
 
 	t.Logf("pubkey: %s", hex.EncodeToString(pubkey))
 
-	hash := owcrypt.Hash(pubkey, 0, owcrypt.HASH_ALG_HASH160)
+	pubkey = append([]byte{0x21}, pubkey...)
+	pubkey = append(pubkey, 0xac)
 
-	//scriptSig = <0 <keyhash>>
-	hash = append([]byte{0x00, 0x14}, hash...)
-	hash = owcrypt.Hash(hash, 0, owcrypt.HASH_ALG_HASH160)
+	hash := owcrypt.Hash(pubkey, 0, owcrypt.HASH_ALG_SHA256)
+	hash = owcrypt.Hash(hash, 0, owcrypt.HASH_ALG_RIPEMD160)
 
 	t.Logf("hash: %s", hex.EncodeToString(hash))
 
-	addr := addressEncoder.AddressEncode(hash, addressEncoder.BTC_mainnetAddressP2SH)
+	addr := addressEncoder.AddressEncode(hash, NEO_mainnetAddressP2PKH)
 
 	t.Logf("addr: %s", addr)
 }

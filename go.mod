@@ -17,6 +17,8 @@ require (
 	github.com/graarh/golang-socketio v0.0.0-20170510162725-2c44953b9b5f
 	github.com/imroc/req v0.2.3
 	github.com/pborman/uuid v1.2.0
+	github.com/pkg/errors v0.8.1
+	github.com/prometheus/common v0.6.0
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24
 	github.com/tidwall/gjson v1.2.1
 )
