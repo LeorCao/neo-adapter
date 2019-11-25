@@ -65,9 +65,7 @@ func decodeTxInFromRawTrans(txBytes []byte, index int) ([]TxIn, int, error) {
 func (in TxIn) toBytes() ([]byte, error) {
 	var ret []byte
 	ret = append(ret, in.txID...)
-	//fmt.Println(fmt.Sprintf("Transaction in tx id %x", in.txID))
 	ret = append(ret, in.vout...)
-	//fmt.Println(fmt.Sprintf("Transaction in vout %x", in.vout))
 	return ret, nil
 }
 
@@ -77,5 +75,5 @@ func (in *TxIn) setEmpty() {
 }
 
 func (ti *TxIn) String() string {
-	return fmt.Sprintf("{txId : %x, vout : %x}", ti.txID, ti.vout)
+	return fmt.Sprintf("{ txId : %x, vout : %x }", ti.txID, ti.vout)
 }

@@ -151,38 +151,16 @@ func DecodeRawTransaction(txBytes []byte) (*Transaction, error) {
 	}
 	rawTx.Scripts = scrips
 
-	fmt.Println(rawTx.String())
-
 	return &rawTx, nil
 }
 
-//func isSegwit(unlockData []TxUnlock, SegwitON bool) (bool, error) {
-//	if unlockData == nil || len(unlockData) == 0 {
-//		return false, errors.New("No lockscript or redeem script found!")
-//	}
-//	for _, u := range unlockData {
-//		_, _, inType, err := checkScriptType(u.LockScript, u.RedeemScript)
-//		if err != nil {
-//			return false, err
-//		}
-//
-//		if inType == TypeP2WPKH || inType == TypeBech32 || (inType == TypeMultiSig && SegwitON) {
-//			return true, nil
-//		}
-//	}
-//	return false, nil
-//}
-
 func (t Transaction) cloneEmpty() Transaction {
 	var ret Transaction
+	ret.Type = t.Type
 	ret.Version = t.Version
-	ret.Vins = append(ret.Vins, t.Vins...)
+	ret.Attributes = append(ret.Attributes, t.Attributes...)
 	ret.Vouts = append(ret.Vouts, t.Vouts...)
-	//ret.LockTime = append(ret.LockTime, t.LockTime...)
-	//ret.Witness = false
-	for i := 0; i < len(ret.Vins); i++ {
-		ret.Vins[i].setEmpty()
-	}
+	ret.Vins = append(ret.Vins, t.Vins...)
 	return ret
 }
 

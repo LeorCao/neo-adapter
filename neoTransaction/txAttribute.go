@@ -94,14 +94,11 @@ func (ta TxAttribute) toBytes() ([]byte, error) {
 	}
 	ret := []byte{}
 	ret = append(ret, ta.usage)
-	//fmt.Println(fmt.Sprintf("Transaction tx attribute usage %x", ta.usage))
 	lengthData := littleEndianBytesToUint16(ta.length)
 	if lengthData > 0 {
 		ret = append(ret, ta.length...)
-		//fmt.Println(fmt.Sprintf("Transaction tx length usage %x", ta.length))
 	}
 	ret = append(ret, ta.data...)
-	//fmt.Println(fmt.Sprintf("Transaction tx data usage %x", ta.data))
 	return ret, nil
 }
 
@@ -112,5 +109,5 @@ func (ta *TxAttribute) setEmpty() {
 }
 
 func (tx *TxAttribute) String() string {
-	return fmt.Sprintf("{usage : %x, length : %x, data : %x}", tx.usage, tx.length, tx.data)
+	return fmt.Sprintf("{ usage : %x, length : %x, data : %x }", tx.usage, tx.length, tx.data)
 }

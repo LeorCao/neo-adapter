@@ -42,9 +42,9 @@ func TestAddressDecoder_Encode(t *testing.T) {
 
 func TestAddressDecoder_Decode(t *testing.T) {
 
-	expResult := "4a43e85f3e0137a23998cdc6dbacfac0268bf038"
+	expResult := "6eacd1e1d0d4885f42fdef0113273499ba9eccac"
 
-	addr := "ANYZ11AmUfwiZFLbAWHoExFyBuqgLmfz88"
+	addr := "AXXYzk1kn9Bj8PHeqha921gqCpwJNRmuHC"
 
 	cfg := NEO_mainnetAddressP2PKH
 
@@ -61,7 +61,7 @@ func TestAddressDecoder_Decode(t *testing.T) {
 }
 
 func TestAddressDecoder_PublicKeyToAddress(t *testing.T) {
-	addr := "031a6c6fbbdf02ca351745fa86b9ba5a9452d785ac4f7fc2b7548ca2a46c4fcf4a"
+	addr := "036943c02168ce22fb2e48a3f92dd72336d295e793a52633beba22ac46916dc201"
 
 	cfg := NEO_mainnetAddressP2PKH
 

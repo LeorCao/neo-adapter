@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"github.com/LeorCao/neo-adapter/neoTransaction"
 	"github.com/blocktree/go-owcdrivers/addressEncoder"
-	"github.com/blocktree/go-owcdrivers/btcTransaction"
 	"path/filepath"
 	"strings"
 	"time"
@@ -54,8 +53,8 @@ const (
 
 // 将交易地址前缀信息移到适配器中
 var (
-	MainNetAddressPrefix = btcTransaction.AddressPrefix{[]byte{0x17}, nil, nil, "neo"}
-	TestNetAddressPrefix = btcTransaction.AddressPrefix{[]byte{0x17}, nil, nil, "neo"}
+	MainNetAddressPrefix = neoTransaction.AddressPrefix{[]byte{0x17}, nil, nil, "neo"}
+	TestNetAddressPrefix = neoTransaction.AddressPrefix{[]byte{0x17}, nil, nil, "neo"}
 )
 
 // 将地址解析配置信息移入适配器中

@@ -143,7 +143,7 @@ func (decoder *TransactionDecoder) SubmitRawTransaction(wrapper openwallet.Walle
 	return tx, nil
 }
 
-////////////////////////// BTC implement //////////////////////////
+////////////////////////// NEO implement //////////////////////////
 
 //CreateRawTransaction 创建交易单
 func (decoder *TransactionDecoder) CreateNEORawTransaction(wrapper openwallet.WalletDAI, rawTx *openwallet.RawTransaction) error {
@@ -334,7 +334,6 @@ func (decoder *TransactionDecoder) CreateNEORawTransaction(wrapper openwallet.Wa
 func (decoder *TransactionDecoder) SignNEORawTransaction(wrapper openwallet.WalletDAI, rawTx *openwallet.RawTransaction) error {
 
 	if rawTx.Signatures == nil || len(rawTx.Signatures) == 0 {
-		//this.wm.Log.Std.Error("len of signatures error. ")
 		return fmt.Errorf("transaction signature is empty")
 	}
 
@@ -364,114 +363,79 @@ func (decoder *TransactionDecoder) SignNEORawTransaction(wrapper openwallet.Wall
 				return fmt.Errorf("transaction hash sign failed, unexpected error: %v", err)
 			}
 
-			sigRawTx, err := neoTransaction.SignatureRawTransaction(rawTx.RawHex, hex.EncodeToString(sigPub.Pubkey), sigPub.Signature)
-			if err != nil {
-				return err
-			}
-
-			rawTx.RawHex = hex.EncodeToString(*sigRawTx)
+			//sigRawTx, err := neoTransaction.SignatureRawTransaction(rawTx.RawHex, hex.EncodeToString(sigPub.Pubkey), sigPub.Signature)
+			//if err != nil {
+			//	return err
+			//}
+			//
+			//rawTx.RawHex = hex.EncodeToString(*sigRawTx)
 
 			decoder.wm.Log.Info("Signature raw transaction : ", rawTx.RawHex)
 
 			keySignature.Signature = hex.EncodeToString(sigPub.Signature)
 		}
 	}
-
-	decoder.wm.Log.Info("transaction hash sign success")
-
 	rawTx.Signatures[rawTx.Account.AccountID] = keySignatures
-
-	//decoder.wm.Log.Info("rawTx.Signatures 1:", rawTx.Signatures)
-
 	return nil
 }
 
 //VerifyRawTransaction 验证交易单，验证交易单并返回加入签名后的交易单
 func (decoder *TransactionDecoder) VerifyNEORawTransaction(wrapper openwallet.WalletDAI, rawTx *openwallet.RawTransaction) error {
 
-	//var (
-	//	emptyTrans    = rawTx.RawHex
-	//	transHash     = make([]neoTransaction.TxHash, 0)
-	//	addressPrefix neoTransaction.AddressPrefix
-	//)
-	//
-	//if rawTx.Signatures == nil || len(rawTx.Signatures) == 0 {
-	//	//this.wm.Log.Std.Error("len of signatures error. ")
-	//	return fmt.Errorf("transaction signature is empty")
-	//}
-	//
-	////TODO:待支持多重签名
-	//
-	//for accountID, keySignatures := range rawTx.Signatures {
-	//	decoder.wm.Log.Debug("accountID Signatures:", accountID)
-	//	for _, keySignature := range keySignatures {
-	//
-	//		signature, _ := hex.DecodeString(keySignature.Signature)
-	//		pubkey, _ := hex.DecodeString(keySignature.Address.PublicKey)
-	//
-	//		signaturePubkey := neoTransaction.SignaturePubkey{
-	//			Signature: signature,
-	//			Pubkey:    pubkey,
-	//		}
-	//
-	//		//sigPub = append(sigPub, signaturePubkey)
-	//
-	//		txHash := neoTransaction.TxHash{
-	//			Hash: keySignature.Message,
-	//			Normal: &neoTransaction.NormalTx{
-	//				Address: keySignature.Address.Address,
-	//				SigType: neoTransaction.SigHashAll,
-	//				SigPub:  signaturePubkey,
-	//			},
-	//		}
-	//
-	//		transHash = append(transHash, txHash)
-	//
-	//		decoder.wm.Log.Debug("Signature:", keySignature.Signature)
-	//		decoder.wm.Log.Debug("PublicKey:", keySignature.Address.PublicKey)
-	//	}
-	//}
-	//
-	//txBytes, err := hex.DecodeString(emptyTrans)
-	//if err != nil {
-	//	return errors.New("Invalid transaction hex data!")
-	//}
-	//
-	//trx, err := neoTransaction.DecodeRawTransaction(txBytes)
-	//if err != nil {
-	//	return errors.New("Invalid transaction data! ")
-	//}
-	//
-	////decoder.wm.Log.Debug(emptyTrans)
-	//
-	//////////填充签名结果到空交易单
-	////  传入TxUnlock结构体的原因是： 解锁向脚本支付的UTXO时需要对应地址的赎回脚本， 当前案例的对应字段置为 "" 即可
-	//signedTrans, err := neoTransaction.InsertSignatureIntoEmptyTransaction(emptyTrans, transHash, decoder.wm.Config.SupportSegWit)
-	//if err != nil {
-	//	return fmt.Errorf("transaction compose signatures failed")
-	//}
-	////else {
-	////	fmt.Println("拼接后的交易单")
-	////	fmt.Println(signedTrans)
-	////}
-	//
-	//if decoder.wm.Config.IsTestNet {
-	//	addressPrefix = decoder.wm.Config.TestNetAddressPrefix
-	//} else {
-	//	addressPrefix = decoder.wm.Config.MainNetAddressPrefix
-	//}
-	//
-	///////////验证交易单
-	////验证时，对于公钥哈希地址，需要将对应的锁定脚本传入TxUnlock结构体
-	//pass := neoTransaction.VerifyRawTransaction(signedTrans, txUnlocks, decoder.wm.Config.SupportSegWit, addressPrefix)
-	//if pass {
-	//	decoder.wm.Log.Debug("transaction verify passed")
-	//	rawTx.IsCompleted = true
-	//	rawTx.RawHex = signedTrans
-	//} else {
-	//	decoder.wm.Log.Debug("transaction verify failed")
-	//	rawTx.IsCompleted = false
-	//}
+	var (
+		emptyTrans    = rawTx.RawHex
+		transHash     = make([]neoTransaction.TxHash, 0)
+	)
+
+	if rawTx.Signatures == nil || len(rawTx.Signatures) == 0 {
+		return fmt.Errorf("transaction signature is empty")
+	}
+
+	//TODO:待支持多重签名
+
+	for accountID, keySignatures := range rawTx.Signatures {
+		decoder.wm.Log.Debug("accountID Signatures:", accountID)
+		for _, keySignature := range keySignatures {
+			signature, _ := hex.DecodeString(keySignature.Signature)
+			pubkey, _ := hex.DecodeString(keySignature.Address.PublicKey)
+
+			signaturePubkey := neoTransaction.SignaturePubkey{
+				Signature: signature,
+				Pubkey:    pubkey,
+			}
+
+			txHash := neoTransaction.TxHash{
+				Hash: keySignature.Message,
+				Normal: &neoTransaction.NormalTx{
+					Address: keySignature.Address.Address,
+					SigPub:  signaturePubkey,
+				},
+			}
+
+			transHash = append(transHash, txHash)
+
+			decoder.wm.Log.Debug("Signature:", keySignature.Signature)
+			decoder.wm.Log.Debug("PublicKey:", keySignature.Address.PublicKey)
+		}
+	}
+
+	////////填充签名结果到空交易单
+	//  传入TxUnlock结构体的原因是： 解锁向脚本支付的UTXO时需要对应地址的赎回脚本， 当前案例的对应字段置为 "" 即可
+	signedTrans, err := neoTransaction.InsertSignatureIntoEmptyTransaction(emptyTrans, transHash)
+	if err != nil {
+		return fmt.Errorf("transaction compose signatures failed")
+	}
+
+	/////////验证交易单
+	pass := neoTransaction.VerifyRawTransaction(signedTrans)
+	if pass {
+		decoder.wm.Log.Debug("transaction verify passed")
+		rawTx.IsCompleted = true
+		rawTx.RawHex = signedTrans
+	} else {
+		decoder.wm.Log.Debug("transaction verify failed")
+		rawTx.IsCompleted = false
+	}
 
 	return nil
 }
@@ -806,7 +770,6 @@ func (decoder *TransactionDecoder) SignOmniRawTransaction(wrapper openwallet.Wal
 					Hash: keySignature.Message,
 					Normal: &omniTransaction.NormalTx{
 						Address: keySignature.Address.Address,
-						SigType: neoTransaction.SigHashAll,
 					},
 				}
 				//transHash = append(transHash, txHash)
@@ -884,7 +847,6 @@ func (decoder *TransactionDecoder) VerifyOmniRawTransaction(wrapper openwallet.W
 				Hash: keySignature.Message,
 				Normal: &omniTransaction.NormalTx{
 					Address: keySignature.Address.Address,
-					SigType: neoTransaction.SigHashAll,
 					SigPub:  signaturePubkey,
 				},
 			}
@@ -915,7 +877,7 @@ func (decoder *TransactionDecoder) VerifyOmniRawTransaction(wrapper openwallet.W
 
 		txUnlock := omniTransaction.TxUnlock{
 			LockScript: utxo.ScriptPubKey,
-			SigType:    neoTransaction.SigHashAll}
+		}
 		txUnlocks = append(txUnlocks, txUnlock)
 
 		transHash = resetTransHashFunc(transHash, utxo.Addr, i)
@@ -1135,6 +1097,10 @@ func (decoder *TransactionDecoder) CreateBTCSummaryRawTransaction(wrapper openwa
 }
 
 //createNEORawTransaction 创建NEO原始交易单
+// wrapper ： 钱包接口
+// rawTx : 交易原始数据
+// usedUTXO : 可以使用的UTXO
+// to : key : 交易接收地址 value : 输出的金额
 func (decoder *TransactionDecoder) createNEORawTransaction(wrapper openwallet.WalletDAI, rawTx *openwallet.RawTransaction, usedUTXO []*UnspentBalance, to map[string]decimal.Decimal) error {
 
 	var (
@@ -1185,7 +1151,7 @@ func (decoder *TransactionDecoder) createNEORawTransaction(wrapper openwallet.Wa
 				log.Error(fmt.Sprintf("unspent tx : \"%s\" value to decimal error: %s", tx.TxID, err.Error()))
 				continue
 			}
-			in := neoTransaction.Vin{tx.TxID, uint32(value.IntPart())}
+			in := neoTransaction.Vin{tx.TxID, uint16(value.IntPart())}
 			vins = append(vins, in)
 		}
 
@@ -1200,26 +1166,12 @@ func (decoder *TransactionDecoder) createNEORawTransaction(wrapper openwallet.Wa
 		vouts = append(vouts, out)
 	}
 
-	//if decoder.wm.Config.IsTestNet {
-	//	addressPrefix = decoder.wm.Config.TestNetAddressPrefix
-	//} else {
-	//	addressPrefix = decoder.wm.Config.MainNetAddressPrefix
-	//}
-
 	/////////构建空交易单
 	emptyTrans, err := neoTransaction.CreateEmptyRawTransaction(neoTransaction.ContractTransaction, vins, vouts, nil)
 
 	if err != nil {
 		return fmt.Errorf("create transaction failed, unexpected error: %v", err)
-		//decoder.wm.Log.Error("构建空交易单失败")
 	}
-
-	// 构建用于签名的交易单哈希
-	//transHash, err := neoTransaction.CreateRawTransactionHashForSig(emptyTrans)
-	//if err != nil {
-	//	return fmt.Errorf("create transaction hash for sig failed, unexpected error: %v", err)
-	//	//decoder.wm.Log.Error("获取待签名交易单哈希失败")
-	//}
 
 	rawTx.RawHex = emptyTrans
 
@@ -1239,7 +1191,7 @@ func (decoder *TransactionDecoder) createNEORawTransaction(wrapper openwallet.Wa
 		EccType: decoder.wm.Config.CurveType,
 		Nonce:   "",
 		Address: addr,
-		Message: nil,
+		Message: "",
 	}
 
 	keySigs = append(keySigs, &signature)

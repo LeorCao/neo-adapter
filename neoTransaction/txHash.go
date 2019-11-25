@@ -1,7 +1,9 @@
 package neoTransaction
 
 import (
+	"encoding/hex"
 	"errors"
+	"github.com/blocktree/go-owcrypt"
 )
 
 type NormalTx struct {
@@ -180,96 +182,52 @@ func (t Transaction) getSegwitBytesForSig(reddemBytes, txid, vout, sequence []by
 	return sigBytes, nil
 }
 
-func (t Transaction) getBytesForSig(lockBytes, redeemBytes []byte, inType, sigType byte, index int, amount uint64, SegwitON bool) ([]byte, error) {
+func (t Transaction) getBytesForSig() ([]byte, error) {
 	sigBytes := []byte{}
-	//var err error
-	//if inType == TypeP2PKH {
-	//	if sigType == SigHashAll {
-	//		t.Vins[index].scriptPub = lockBytes
-	//		sigBytes, err = t.encodeToBytes(SegwitON)
-	//
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//	} else {
-	//		// TODO
-	//		return nil, errors.New("The sigType inputed is not supported yet!")
-	//	}
-	//} else if inType == TypeP2WPKH {
-	//	if sigType == SigHashAll {
-	//		sigBytes, err = t.getSegwitBytesForSig(redeemBytes, t.Vins[index].txID, t.Vins[index].vout, t.Vins[index].sequence, sigType, amount)
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//	} else {
-	//		// TODO
-	//		return nil, errors.New("The sigType inputed is not supported yet!")
-	//	}
-	//} else if inType == TypeBech32 {
-	//	if sigType == SigHashAll {
-	//		sigBytes, err = t.getSegwitBytesForSig(lockBytes, t.Vins[index].txID, t.Vins[index].vout, t.Vins[index].sequence, sigType, amount)
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//	} else {
-	//		// TODO
-	//		return nil, errors.New("The sigType inputed is not supported yet!")
-	//	}
-	//} else if inType == TypeMultiSig {
-	//	if sigType == SigHashAll {
-	//		if SegwitON {
-	//			sigBytes, err = t.getSegwitBytesForSig(redeemBytes, t.Vins[index].txID, t.Vins[index].vout, t.Vins[index].sequence, sigType, amount)
-	//			if err != nil {
-	//				return nil, err
-	//			}
-	//		} else {
-	//			t.Vins[index].scriptPub = redeemBytes
-	//			sigBytes, err = t.encodeToBytes(SegwitON)
-	//
-	//			if err != nil {
-	//				return nil, err
-	//			}
-	//		}
-	//
-	//	} else {
-	//		// TODO
-	//		return nil, errors.New("The sigType inputed is not supported yet!")
-	//	}
-	//}
-	//
-	//sigBytes = append(sigBytes, uint32ToLittleEndianBytes(DefaultHashType)...)
+	var err error
+	sigBytes, err = t.encodeToBytes()
+	if err != nil {
+		return nil, err
+	}
+
 	return sigBytes, nil
 }
 
 func (t Transaction) getHashesForSig() ([]TxHash, error) {
 	hashes := []TxHash{}
-	//if t.Vouts == nil || len(t.Vouts) == 0 {
-	//	return nil, errors.New("No output found!")
-	//}
-	//
-	//for i := 0; i < len(unlockData); i++ {
-	//	for j := 0; j < len(unlockData); j++ {
-	//		t.Vins[j].setEmpty()
-	//	}
-	//	lockBytes, redeemBytes, inType, err := checkScriptType(unlockData[i].LockScript, nil)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	sigBytes, err := t.getBytesForSig(lockBytes, redeemBytes, inType, unlockData[i].SigType, i, unlockData[i].Amount, SegwitON)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	hash := owcrypt.Hash(sigBytes, 0, owcrypt.HASh_ALG_DOUBLE_SHA256)
-	//
-	//	txHash, err := newTxHash(hash, lockBytes, redeemBytes, inType, unlockData[i].SigType, addressPrefix)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	hashes = append(hashes, *txHash)
-	//}
+	if t.Vouts == nil || len(t.Vouts) == 0 {
+		return nil, errors.New("No output found!")
+	}
 
+	emptyTrans := t.cloneEmpty()
+
+	emptyTransBytes, err := emptyTrans.encodeToBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	hash := owcrypt.Hash(emptyTransBytes, 0, owcrypt.HASH_ALG_SHA256)
+
+	for _, script := range t.Scripts {
+		pubKey, err := script.GetPubKeyByVerificationScript()
+		if err != nil {
+			return nil, err
+		}
+		sign, err := script.GetSignatureByInvocationScript()
+		hashes = append(hashes, TxHash{
+			hex.EncodeToString(hash),
+			0,
+			&NormalTx{
+				"",
+				0,
+				SignaturePubkey{
+					sign,
+					pubKey,
+				},
+			},
+			nil,
+		})
+	}
 	return hashes, nil
 }
 

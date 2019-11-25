@@ -74,17 +74,10 @@ func (decoder *addressDecoder) PrivateKeyToWIF(priv []byte, isTestnet bool) (str
 
 //PublicKeyToAddress 公钥转地址
 func (decoder *addressDecoder) PublicKeyToAddress(pub []byte, isTestnet bool) (string, error) {
-
 	cfg := NEO_mainnetAddressP2PKH
 	if decoder.wm.Config.IsTestNet {
 		cfg = NEO_testnetAddressP2PKH
 	}
-
-	//pkHash := btcutil.Hash160(pub)
-	//address, err :=  btcutil.NewAddressPubKeyHash(pkHash, &cfg)
-	//if err != nil {
-	//	return "", err
-	//}
 
 	pub = append([]byte{0x21}, pub...)
 	pub = append(pub, 0xac)
@@ -92,17 +85,7 @@ func (decoder *addressDecoder) PublicKeyToAddress(pub []byte, isTestnet bool) (s
 	sha256result := owcrypt.Hash(pub, 0, owcrypt.HASH_ALG_SHA256)
 	pkHash := owcrypt.Hash(sha256result, 0, owcrypt.HASH_ALG_RIPEMD160)
 
-	//pkHash := owcrypt.Hash(pub, 0, owcrypt.HASH_ALG_HASH160)
-
 	address := addressEncoder.AddressEncode(pkHash, cfg)
-
-	//if decoder.wm.Config.RPCServerType == RPCServerCore {
-	//	//如果使用core钱包作为全节点，需要导入地址到core，这样才能查询地址余额和utxo
-	//	err := decoder.wm.ImportAddress(address, "")
-	//	if err != nil {
-	//		return "", err
-	//	}
-	//}
 
 	return address, nil
 

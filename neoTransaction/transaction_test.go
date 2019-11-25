@@ -1651,3 +1651,13 @@ func Test_case3(t *testing.T) {
 //		t.Error("验证失败!")
 //	}
 //}
+
+// 测试验证原始交易
+func TestVerifyRawTransaction(t *testing.T) {
+	signRawTrans := "80000001e68886c12efbb0b3afe14367eb23910e62b6d17e1582ede73fc53945bcafc8100100029b7cffdaa674beae0f930ebe6085af9093e5fe56b34a5c220ccdcf6efc336fc500e1f505000000004a43e85f3e0137a23998cdc6dbacfac0268bf0389b7cffdaa674beae0f930ebe6085af9093e5fe56b34a5c220ccdcf6efc336fc50073e581df862300accc9eba9934271301effd425f88d4d0e1d1ac6e0141409d4a90a60013929bd69b045371f6d7d5b68ba6fcbd9b70b1ba04e7d75cb43d6eb1645718033c032a6a659bf4873ed717227ae7277897fae98f66614064553bbf2321036943c02168ce22fb2e48a3f92dd72336d295e793a52633beba22ac46916dc201ac"
+	if !VerifyRawTransaction(signRawTrans) {
+		t.Error("Verify raw transaction error!")
+		return
+	}
+	t.Log("Verify raw transaction success!")
+}

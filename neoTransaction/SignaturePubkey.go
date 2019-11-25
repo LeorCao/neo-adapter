@@ -1,9 +1,7 @@
 package neoTransaction
 
 import (
-	"encoding/hex"
 	"errors"
-	"fmt"
 	"math/big"
 
 	"github.com/blocktree/go-owcrypt"
@@ -34,16 +32,11 @@ func serilizeS(sig []byte) []byte {
 }
 
 func calcSignaturePubkey(txHash, prikey []byte) (*SignaturePubkey, error) {
-	fmt.Println(fmt.Sprintf("待签名的内容 ： %s", hex.EncodeToString(txHash)))
 	if txHash == nil || prikey == nil || len(prikey) != 32 {
 		return nil, errors.New("Transaction hash or private key data error!")
 	}
 
 	txHash = owcrypt.Hash(txHash, 0, owcrypt.HASH_ALG_SHA256)
-	fmt.Println(fmt.Sprintf("SHA 256 result :  %s", hex.EncodeToString(txHash)))
-	if "01c6fd5759cf4da52dec889352028aa90813fab57373ddc8b0fb0061699b74f3" == hex.EncodeToString(txHash) {
-		fmt.Println("SHA 256 结果相等！！！！")
-	}
 	sig, err := owcrypt.Signature(prikey, nil, 0, txHash, 32, owcrypt.ECC_CURVE_SECP256R1)
 	if err != owcrypt.SUCCESS {
 		return nil, errors.New("Signature failed!")

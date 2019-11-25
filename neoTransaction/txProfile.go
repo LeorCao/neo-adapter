@@ -7,11 +7,6 @@ type AddressPrefix struct {
 	Bech32Prefix string
 }
 
-var (
-	BTCMainnetAddressPrefix = AddressPrefix{[]byte{0x00}, []byte{0x05}, nil, "bc"}
-	BTCTestnetAddressPrefix = AddressPrefix{[]byte{0x6F}, []byte{0xC4}, nil, "tb"}
-)
-
 // 交易类型
 type TransactionType struct {
 	jsonValue string
@@ -104,23 +99,6 @@ const (
 )
 
 const (
-	SegWitSymbol  = byte(0)
-	SegWitVersion = byte(1)
-	SigHashAll    = byte(1)
-)
-
-const (
-	//OpCodeHash160     = byte(0xA9)
-	//OpCodeEqual       = byte(0x87)
-	//OpCodeEqualVerify = byte(0x88)
-	//OpCodeCheckSig    = byte(0xAC)
-	//OpCodeDup         = byte(0x76)
-	//OpCode_1          = byte(0x51)
-	//OpCheckMultiSig   = byte(0xAE)
-	//OpPushData1       = byte(0x4C)
-	//OpPushData2       = byte(0x4D)
-	//OpPushData3       = byte(0x4E)
-
 	OpPushBytes64 = byte(0x40)
 	OpPushBytes33 = byte(0x21)
 	OpCheckSig    = byte(0xac)

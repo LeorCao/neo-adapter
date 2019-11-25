@@ -74,11 +74,8 @@ func (out TxOut) toBytes() ([]byte, error) {
 
 	ret := []byte{}
 	ret = append(ret, out.asset...)
-	//fmt.Println(fmt.Sprintf("Transaction out asset %x", out.asset))
 	ret = append(ret, out.value...)
-	//fmt.Println(fmt.Sprintf("Transaction out value %x", out.value))
 	ret = append(ret, out.address...)
-	//fmt.Println(fmt.Sprintf("Transaction out address %x", out.address))
 	return ret, nil
 }
 
@@ -89,5 +86,5 @@ func (to *TxOut) setEmpty() {
 }
 
 func (to *TxOut) String() string {
-	return fmt.Sprintf("{ asset : %x, value : %x, address : %x}", to.asset, to.value, to.address)
+	return fmt.Sprintf("{ asset : %x, value : %x, address : %x }", to.asset, to.value, to.address)
 }
