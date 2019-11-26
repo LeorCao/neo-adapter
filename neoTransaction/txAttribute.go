@@ -24,6 +24,8 @@ type TxAttribute struct {
 	data   []byte
 }
 
+// 创建交易附加信息并序列化
+// attrs : 交易附加信息元数据
 func newTxAttributeForEmptyTrans(attrs []Attribute) ([]TxAttribute, error) {
 
 	ret := make([]TxAttribute, 0)
@@ -48,6 +50,9 @@ func newTxAttributeForEmptyTrans(attrs []Attribute) ([]TxAttribute, error) {
 	return ret, nil
 }
 
+// 反序列化交易附加信息
+// txBytes : 交易序列化数组
+// index : 对应在序列化数组中的索引
 func decodeTxAttributeFromRawTrans(txByte []byte, index int) ([]TxAttribute, int, error) {
 	var txAttrs = make([]TxAttribute, 0)
 	var attrCount = txByte[index]
@@ -88,6 +93,7 @@ func decodeTxAttributeFromRawTrans(txByte []byte, index int) ([]TxAttribute, int
 	return txAttrs, index, nil
 }
 
+// 转换为字节数组
 func (ta TxAttribute) toBytes() ([]byte, error) {
 	if ta.usage < 0 || ta.usage > 0xff {
 		return nil, errors.New(fmt.Sprintf("Invalid usage value : %d", ta.usage))
@@ -100,12 +106,6 @@ func (ta TxAttribute) toBytes() ([]byte, error) {
 	}
 	ret = append(ret, ta.data...)
 	return ret, nil
-}
-
-func (ta *TxAttribute) setEmpty() {
-	ta.usage = byte(0)
-	ta.length = []byte{}
-	ta.data = []byte{}
 }
 
 func (tx *TxAttribute) String() string {

@@ -3,6 +3,7 @@ package neoTransaction
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/blocktree/go-owcrypt"
 	"testing"
 )
 
@@ -16,13 +17,15 @@ func TestReverseHex(t *testing.T) {
 func Test_case1(t *testing.T) {
 
 	// 前置交易ID和UTXO对应的索引
-	in := Vin{"10c8afbc4539c53fe7ed82157ed1b6620e9123eb6743e1afb3b0fb2ec18688e6", uint16(1)}
+	in1 := Vin{"3e7146b4f1841a591d5989d6fc01d7ae3631136178d932de36ad0ebe63ba8113", uint16(1)}
+	in2 := Vin{"7b84a50bbc5d8480361a868efaddaef4411f6ceebf9d84e393644f074c289d0f", uint16(1)}
+
 	// 目标地址和发送金额
-	out1 := Vout{NeoAssetId, "ANYZ11AmUfwiZFLbAWHoExFyBuqgLmfz88", uint64(1)}
-	out2 := Vout{NeoAssetId, "AXXYzk1kn9Bj8PHeqha921gqCpwJNRmuHC", uint64(99999187)}
+	out1 := Vout{NeoAssetId, "ANYZ11AmUfwiZFLbAWHoExFyBuqgLmfz88", uint64(65)}
+	out2 := Vout{NeoAssetId, "AXXYzk1kn9Bj8PHeqha921gqCpwJNRmuHC", uint64(99999073)}
 
 	// 构建空交易单
-	emptyTrans, err := CreateEmptyRawTransaction(ContractTransaction, []Vin{in}, []Vout{out1, out2}, nil)
+	emptyTrans, err := CreateEmptyRawTransaction(ContractTransaction, []Vin{in1, in2}, []Vout{out1, out2}, nil)
 
 	if err != nil {
 		t.Error("构建空交易单失败")
@@ -31,58 +34,62 @@ func Test_case1(t *testing.T) {
 		fmt.Println(emptyTrans)
 	}
 
-	emptyTransStr := "80000001d9546587319e4ee9dc814ffb67d4fe60bf9316152ca6d3c04b4b7911c52b96470300029b7cffdaa674beae0f930ebe6085af9093e5fe56b34a5c220ccdcf6efc336fc500e1f505000000004a43e85f3e0137a23998cdc6dbacfac0268bf0389b7cffdaa674beae0f930ebe6085af9093e5fe56b34a5c220ccdcf6efc336fc50035d18ddf862300accc9eba9934271301effd425f88d4d0e1d1ac6e"
-	if emptyTransStr == emptyTrans {
-		fmt.Println("空交易单创建成功， 两边创建的相等！！！！！")
+	privKeys := []string{
+		"55c87b7b8f435364250b271d979bfd3f83ebbc9950598a7b52b11ed7b117f89c",
+		"7bd61eb925f715e9520987700c44bb9641ef8c1759984f7c21e5d584a8b81c30",
 	}
 
-	privKey := "7bd61eb925f715e9520987700c44bb9641ef8c1759984f7c21e5d584a8b81c30"
-	privKeyBytes, err := hex.DecodeString(privKey)
-	if err != nil {
-		t.Error(err.Error())
-		return
+	signs := make([]SignaturePubkey, 0)
+	txHashs := []TxHash{}
+	for _, privKey := range privKeys {
+		privKeyBytes, err := hex.DecodeString(privKey)
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
+
+		//签名
+		sigPub, err := SignRawTransaction(emptyTrans, privKeyBytes)
+		if err != nil {
+			t.Error("hash签名失败")
+		} else {
+			fmt.Println("hash签名结果为")
+			fmt.Println(hex.EncodeToString(sigPub.Signature))
+			fmt.Println("对应的公钥为")
+			fmt.Println(hex.EncodeToString(sigPub.Pubkey))
+		}
+		signs = append(signs, *sigPub)
+
+		emptyTransBytes, err := hex.DecodeString(emptyTrans)
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
+
+		txHash := owcrypt.Hash(emptyTransBytes, 0, owcrypt.HASH_ALG_SHA256)
+		txHashs = append(txHashs, TxHash{hex.EncodeToString(txHash), 0, &NormalTx{"", 0, *sigPub}, nil})
 	}
-	//签名
-	sigPub, err := SignRawTransactionHash(emptyTrans, privKeyBytes)
+
+	// 签名结果返回给服务器
+	// 拼接
+	// 服务器收到签名结果后，回填TxHash结构体
+
+	//交易单合并
+	signedTrans, err := InsertSignatureIntoEmptyTransaction(emptyTrans, txHashs)
 	if err != nil {
-		t.Error("hash签名失败")
+		t.Error("插入交易单失败")
 	} else {
-		fmt.Println("hash签名结果为")
-		fmt.Println(hex.EncodeToString(sigPub.Signature))
-		fmt.Println("对应的公钥为")
-		fmt.Println(hex.EncodeToString(sigPub.Pubkey))
+		fmt.Println("合并之后的交易单")
+		fmt.Println(signedTrans)
 	}
 
-	sigRawTx, err := SignatureRawTransaction(emptyTrans, hex.EncodeToString(sigPub.Pubkey), sigPub.Signature)
-	if err != nil {
-		t.Error(err.Error())
-		return
+	// 验证交易单
+	pass := VerifyRawTransaction(signedTrans)
+	if pass {
+		fmt.Println("验证通过!")
+	} else {
+		t.Error("验证失败!")
 	}
-
-	fmt.Println(fmt.Sprintf("signature raw transaction is : %s", hex.EncodeToString(*sigRawTx)))
-
-	//
-	//// 签名结果返回给服务器
-	//// 拼接
-	//// 服务器收到签名结果后，回填TxHash结构体
-	//transHash[0].Normal.SigPub = *sigPub
-	//
-	////交易单合并
-	//signedTrans, err := InsertSignatureIntoEmptyTransaction(emptyTrans, transHash, []TxUnlock{unlockData}, segwit)
-	//if err != nil {
-	//	t.Error("插入交易单失败")
-	//} else {
-	//	fmt.Println("合并之后的交易单")
-	//	fmt.Println(signedTrans)
-	//}
-	//
-	//// 验证交易单
-	//pass := VerifyRawTransaction(signedTrans, []TxUnlock{unlockData}, segwit, addressPrefix)
-	//if pass {
-	//	fmt.Println("验证通过!")
-	//} else {
-	//	t.Error("验证失败!")
-	//}
 }
 
 //案例二：
@@ -148,7 +155,7 @@ func Test_case2(t *testing.T) {
 	//in2Prikey := []byte{0x80, 0xbc, 0x39, 0x8d, 0x7c, 0x4a, 0x67, 0x4d, 0xaa, 0x97, 0x75, 0x66, 0xc2, 0xe6, 0xcd, 0x50, 0x40, 0x52, 0x00, 0x27, 0xe5, 0x7f, 0xe8, 0x06, 0xdf, 0xaa, 0x86, 0x8d, 0xf4, 0xcc, 0x43, 0xab}
 	//
 	//// 客户端对第一条hash进行签名
-	//sigPub1, err := SignRawTransactionHash(transHash[0].Hash, in1Prikey)
+	//sigPub1, err := SignRawTransaction(transHash[0].Hash, in1Prikey)
 	//if err != nil {
 	//	t.Error("第一条hash签名失败!")
 	//} else {
@@ -159,7 +166,7 @@ func Test_case2(t *testing.T) {
 	//}
 	//
 	//// 客户端对第二条hash进行签名
-	//sigPub2, err := SignRawTransactionHash(transHash[1].Hash, in2Prikey)
+	//sigPub2, err := SignRawTransaction(transHash[1].Hash, in2Prikey)
 	//if err != nil {
 	//	t.Error("第二条hash签名失败!")
 	//} else {
@@ -244,7 +251,7 @@ func Test_case3(t *testing.T) {
 	//inPrikey := []byte{0x89, 0xde, 0x39, 0x3e, 0x2f, 0x37, 0x2d, 0xbd, 0x1a, 0xca, 0x72, 0x72, 0x68, 0x55, 0x14, 0xeb, 0xaa, 0x5a, 0x99, 0xc1, 0xe2, 0xb1, 0x89, 0xb3, 0xb9, 0xf3, 0x8f, 0x6c, 0x80, 0x32, 0xfe, 0x1d}
 	//
 	////签名
-	//sigPub, err := SignRawTransactionHash(transHash[0].Hash, inPrikey)
+	//sigPub, err := SignRawTransaction(transHash[0].Hash, inPrikey)
 	//if err != nil {
 	//	t.Error("hash签名失败")
 	//} else {
@@ -349,7 +356,7 @@ func Test_case3(t *testing.T) {
 //	// 客户端使用对应私钥进行签名
 //
 //	//第一个
-//	sigPub1, err := SignRawTransactionHash(transHash[0].Hash, in1Prikey)
+//	sigPub1, err := SignRawTransaction(transHash[0].Hash, in1Prikey)
 //	if err != nil {
 //		t.Error("第一个hash签名失败")
 //	} else {
@@ -360,7 +367,7 @@ func Test_case3(t *testing.T) {
 //	}
 //
 //	//第二个
-//	sigPub2, err := SignRawTransactionHash(transHash[1].Hash, in2Prikey)
+//	sigPub2, err := SignRawTransaction(transHash[1].Hash, in2Prikey)
 //	if err != nil {
 //		t.Error("第二个hash签名失败")
 //	} else {
@@ -464,7 +471,7 @@ func Test_case3(t *testing.T) {
 //	in2Prikey := []byte{0x7e, 0x41, 0x21, 0x9c, 0x19, 0x07, 0x65, 0x95, 0xdc, 0x17, 0x42, 0x1f, 0xfd, 0x89, 0x41, 0x88, 0x35, 0x4d, 0x15, 0x15, 0x39, 0xc1, 0xbe, 0x1c, 0x15, 0xe9, 0x75, 0xfc, 0xc9, 0xc4, 0x77, 0x89}
 //
 //	//第一个
-//	sigPub1, err := SignRawTransactionHash(transHash[0].Hash, in1Prikey)
+//	sigPub1, err := SignRawTransaction(transHash[0].Hash, in1Prikey)
 //	if err != nil {
 //		t.Error("第一个hash签名失败")
 //	} else {
@@ -474,7 +481,7 @@ func Test_case3(t *testing.T) {
 //		fmt.Println(hex.EncodeToString(sigPub1.Pubkey))
 //	}
 //	//第二个
-//	sigPub2, err := SignRawTransactionHash(transHash[1].Hash, in2Prikey)
+//	sigPub2, err := SignRawTransaction(transHash[1].Hash, in2Prikey)
 //	if err != nil {
 //		t.Error("第二个hash签名失败")
 //	} else {
@@ -563,7 +570,7 @@ func Test_case3(t *testing.T) {
 //
 //	inPrikey := []byte{0x80, 0xbc, 0x39, 0x8d, 0x7c, 0x4a, 0x67, 0x4d, 0xaa, 0x97, 0x75, 0x66, 0xc2, 0xe6, 0xcd, 0x50, 0x40, 0x52, 0x00, 0x27, 0xe5, 0x7f, 0xe8, 0x06, 0xdf, 0xaa, 0x86, 0x8d, 0xf4, 0xcc, 0x43, 0xab}
 //
-//	sigPub, err := SignRawTransactionHash(transHash[0].Hash, inPrikey)
+//	sigPub, err := SignRawTransaction(transHash[0].Hash, inPrikey)
 //	if err != nil {
 //		t.Error("hash签名失败")
 //	} else {
@@ -647,7 +654,7 @@ func Test_case3(t *testing.T) {
 //	inPrikey := []byte{0x84, 0x98, 0x23, 0xd2, 0x2d, 0x81, 0xe4, 0x9e, 0xb7, 0x19, 0x06, 0x6b, 0xcf, 0x7e, 0xd1, 0x73, 0xe6, 0x09, 0x48, 0x22, 0xb0, 0xea, 0x4e, 0x79, 0x3f, 0x1d, 0x85, 0x97, 0xa5, 0x06, 0x0d, 0x27}
 //
 //	//签名
-//	sigPub, err := SignRawTransactionHash(transHash[0].Hash, inPrikey)
+//	sigPub, err := SignRawTransaction(transHash[0].Hash, inPrikey)
 //	if err != nil {
 //		t.Error("hash签名失败")
 //	} else {
@@ -761,7 +768,7 @@ func Test_case3(t *testing.T) {
 //	priB := []byte{0x4a, 0x11, 0x66, 0x9e, 0xa6, 0x64, 0xea, 0x19, 0xb7, 0x02, 0x98, 0x34, 0xe5, 0x12, 0xa8, 0x46, 0x54, 0xef, 0x80, 0x0a, 0x71, 0x61, 0xbc, 0xd1, 0x31, 0xd2, 0xf4, 0x7b, 0xfc, 0x07, 0xc5, 0x2a}
 //
 //	// A 签名
-//	sigPubA, err := SignRawTransactionHash(transHash[0].Hash, priA)
+//	sigPubA, err := SignRawTransaction(transHash[0].Hash, priA)
 //	if err != nil {
 //		t.Error("A签名失败")
 //	} else {
@@ -770,7 +777,7 @@ func Test_case3(t *testing.T) {
 //	}
 //
 //	// B 签名
-//	sigPubB, err := SignRawTransactionHash(transHash[0].Hash, priB)
+//	sigPubB, err := SignRawTransaction(transHash[0].Hash, priB)
 //	if err != nil {
 //		t.Error("B签名失败")
 //	} else {
@@ -884,7 +891,7 @@ func Test_case3(t *testing.T) {
 //	priB := []byte{0x4a, 0x11, 0x66, 0x9e, 0xa6, 0x64, 0xea, 0x19, 0xb7, 0x02, 0x98, 0x34, 0xe5, 0x12, 0xa8, 0x46, 0x54, 0xef, 0x80, 0x0a, 0x71, 0x61, 0xbc, 0xd1, 0x31, 0xd2, 0xf4, 0x7b, 0xfc, 0x07, 0xc5, 0x2a}
 //
 //	// A 签名
-//	sigPubA, err := SignRawTransactionHash(transHash[0].Hash, priA)
+//	sigPubA, err := SignRawTransaction(transHash[0].Hash, priA)
 //	if err != nil {
 //		t.Error("A签名失败")
 //	} else {
@@ -893,7 +900,7 @@ func Test_case3(t *testing.T) {
 //	}
 //
 //	// B 签名
-//	sigPubB, err := SignRawTransactionHash(transHash[0].Hash, priB)
+//	sigPubB, err := SignRawTransaction(transHash[0].Hash, priB)
 //	if err != nil {
 //		t.Error("B签名失败")
 //	} else {
@@ -1005,7 +1012,7 @@ func Test_case3(t *testing.T) {
 //	priB := []byte{0x4a, 0x11, 0x66, 0x9e, 0xa6, 0x64, 0xea, 0x19, 0xb7, 0x02, 0x98, 0x34, 0xe5, 0x12, 0xa8, 0x46, 0x54, 0xef, 0x80, 0x0a, 0x71, 0x61, 0xbc, 0xd1, 0x31, 0xd2, 0xf4, 0x7b, 0xfc, 0x07, 0xc5, 0x2a}
 //
 //	// A 签名
-//	sigPubA, err := SignRawTransactionHash(transHash[0].Hash, priA)
+//	sigPubA, err := SignRawTransaction(transHash[0].Hash, priA)
 //	if err != nil {
 //		t.Error("A签名失败")
 //	} else {
@@ -1014,7 +1021,7 @@ func Test_case3(t *testing.T) {
 //	}
 //
 //	// B 签名
-//	sigPubB, err := SignRawTransactionHash(transHash[0].Hash, priB)
+//	sigPubB, err := SignRawTransaction(transHash[0].Hash, priB)
 //	if err != nil {
 //		t.Error("B签名失败")
 //	} else {
@@ -1125,7 +1132,7 @@ func Test_case3(t *testing.T) {
 //	priB := []byte{0x4a, 0x11, 0x66, 0x9e, 0xa6, 0x64, 0xea, 0x19, 0xb7, 0x02, 0x98, 0x34, 0xe5, 0x12, 0xa8, 0x46, 0x54, 0xef, 0x80, 0x0a, 0x71, 0x61, 0xbc, 0xd1, 0x31, 0xd2, 0xf4, 0x7b, 0xfc, 0x07, 0xc5, 0x2a}
 //
 //	// A 签名
-//	sigPubA, err := SignRawTransactionHash(transHash[0].Hash, priA)
+//	sigPubA, err := SignRawTransaction(transHash[0].Hash, priA)
 //	if err != nil {
 //		t.Error("A签名失败")
 //	} else {
@@ -1134,7 +1141,7 @@ func Test_case3(t *testing.T) {
 //	}
 //
 //	// B 签名
-//	sigPubB, err := SignRawTransactionHash(transHash[0].Hash, priB)
+//	sigPubB, err := SignRawTransaction(transHash[0].Hash, priB)
 //	if err != nil {
 //		t.Error("B签名失败")
 //	} else {
@@ -1226,7 +1233,7 @@ func Test_case3(t *testing.T) {
 //	inPrikey := []byte{0x45, 0x5d, 0x44, 0x9c, 0x29, 0x8e, 0xca, 0x9c, 0x69, 0xf7, 0xc1, 0xee, 0xb6, 0x6a, 0xfe, 0x40, 0x0f, 0x67, 0xe7, 0xe3, 0x13, 0x18, 0xc8, 0xd8, 0x10, 0x05, 0xc8, 0xc0, 0xc7, 0xab, 0xd8, 0xb5}
 //
 //	//签名
-//	sigPub, err := SignRawTransactionHash(hash, inPrikey)
+//	sigPub, err := SignRawTransaction(hash, inPrikey)
 //	if err != nil {
 //		t.Error("hash签名失败")
 //	} else {
@@ -1318,7 +1325,7 @@ func Test_case3(t *testing.T) {
 //	in2Prikey := []byte{0xd7, 0x2e, 0x8d, 0x5b, 0xb4, 0x03, 0xeb, 0x9f, 0x4d, 0x64, 0x56, 0x4d, 0xf5, 0xf1, 0xbb, 0xa5, 0x53, 0xda, 0x68, 0x06, 0x89, 0x01, 0xd8, 0x37, 0x23, 0x20, 0xb4, 0xa1, 0x9c, 0xf7, 0xdc, 0xa0}
 //
 //	// 客户端对第一条hash进行签名
-//	sigPub1, err := SignRawTransactionHash(transHash[0].Hash, in1Prikey)
+//	sigPub1, err := SignRawTransaction(transHash[0].Hash, in1Prikey)
 //	if err != nil {
 //		t.Error("第一条hash签名失败!")
 //	} else {
@@ -1329,7 +1336,7 @@ func Test_case3(t *testing.T) {
 //	}
 //
 //	// 客户端对第二条hash进行签名
-//	sigPub2, err := SignRawTransactionHash(transHash[1].Hash, in2Prikey)
+//	sigPub2, err := SignRawTransaction(transHash[1].Hash, in2Prikey)
 //	if err != nil {
 //		t.Error("第二条hash签名失败!")
 //	} else {
@@ -1425,7 +1432,7 @@ func Test_case3(t *testing.T) {
 //	inPrikey, _ := hex.DecodeString("80bc398d7c4a674daa977566c2e6cd5040520027e57fe806dfaa868df4cc43ab")
 //	for {
 //		//签名
-//		sigPub, _ := SignRawTransactionHash(hash, inPrikey)
+//		sigPub, _ := SignRawTransaction(hash, inPrikey)
 //		if sigPub.Signature[0] == 0x00 && sigPub.Signature[1] > 0x80 {
 //			fmt.Println("hash签名结果为")
 //			fmt.Println(hex.EncodeToString(sigPub.Signature))
@@ -1523,7 +1530,7 @@ func Test_case3(t *testing.T) {
 //	inPrikey := []byte{0x80, 0xbc, 0x39, 0x8d, 0x7c, 0x4a, 0x67, 0x4d, 0xaa, 0x97, 0x75, 0x66, 0xc2, 0xe6, 0xcd, 0x50, 0x40, 0x52, 0x00, 0x27, 0xe5, 0x7f, 0xe8, 0x06, 0xdf, 0xaa, 0x86, 0x8d, 0xf4, 0xcc, 0x43, 0xab}
 //
 //	//签名
-//	sigPub, err := SignRawTransactionHash(hash, inPrikey)
+//	sigPub, err := SignRawTransaction(hash, inPrikey)
 //	if err != nil {
 //		t.Error("hash签名失败")
 //	} else {
@@ -1619,7 +1626,7 @@ func Test_case3(t *testing.T) {
 //	inPrikey := []byte{0x80, 0xbc, 0x39, 0x8d, 0x7c, 0x4a, 0x67, 0x4d, 0xaa, 0x97, 0x75, 0x66, 0xc2, 0xe6, 0xcd, 0x50, 0x40, 0x52, 0x00, 0x27, 0xe5, 0x7f, 0xe8, 0x06, 0xdf, 0xaa, 0x86, 0x8d, 0xf4, 0xcc, 0x43, 0xab}
 //
 //	//签名
-//	sigPub, err := SignRawTransactionHash(hash, inPrikey)
+//	sigPub, err := SignRawTransaction(hash, inPrikey)
 //	if err != nil {
 //		t.Error("hash签名失败")
 //	} else {

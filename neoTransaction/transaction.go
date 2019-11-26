@@ -3,6 +3,7 @@ package neoTransaction
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"github.com/blocktree/go-owcrypt"
 )
 
@@ -11,19 +12,18 @@ type Vin struct {
 	Vout uint16
 }
 
-type Vout struct {
-	/*
-		{
-			"n": 0,
-			"asset": "0xc56f33fc6ecfcd0c225c4ab356fee59390af8560be0e930faebe74a6daff7c9b",
-			"value": "100",
-			"address": "AJABcaJHDpbovCPCwszBkhK6QwWkC8ogWR"
-		}
-	*/
+func (vin *Vin) String() string {
+	return fmt.Sprintf("Attribute : { txid : %s, vout : %d } ", vin.TxID, vin.Vout)
+}
 
+type Vout struct {
 	Asset   string
 	Address string
 	Value   uint64
+}
+
+func (vout *Vout) String() string {
+	return fmt.Sprintf("Attribute : { asset : %s, address : %s, value : %d } ", vout.Asset, vout.Address, vout.Value)
 }
 
 type Attribute struct {
@@ -31,15 +31,24 @@ type Attribute struct {
 	Data string
 }
 
+func (attr *Attribute) String() string {
+	return fmt.Sprintf("Attribute : { usage : %s, data : %s } ", attr.Attr.jsonString, attr.Data)
+}
+
 type Script struct {
 	Invocation   string
 	Verification string
 }
 
-type TxUnlock struct {
-	LockScript string
+func (s *Script) String() string {
+	return fmt.Sprintf(" Script : { invocation : %s, verification : %s }", s.Invocation, s.Verification)
 }
 
+// 创建未签名的空交易
+// txType : 交易类型
+// vins : 交易输入
+// vouts : 交易输出
+// attrs : 交易附加属性
 func CreateEmptyRawTransaction(txType TransactionType, vins []Vin, vouts []Vout, attrs []Attribute) (string, error) {
 
 	emptyTrans, err := newEmptyTransaction(txType, vins, vouts, attrs)
@@ -69,8 +78,11 @@ func CreateRawTransactionHashForSig(txHex string) ([]TxHash, error) {
 	return emptyTrans.getHashesForSig()
 }
 
-func SignRawTransactionHash(txHash string, prikey []byte) (*SignaturePubkey, error) {
-	hash, err := hex.DecodeString(txHash)
+// 签名原始交易
+// rawTx : 组装获得的原始交易
+// priKey : 签名的私钥
+func SignRawTransaction(rawTx string, prikey []byte) (*SignaturePubkey, error) {
+	hash, err := hex.DecodeString(rawTx)
 	if err != nil {
 		return nil, errors.New("Invalid transaction hash!")
 	}
@@ -78,8 +90,11 @@ func SignRawTransactionHash(txHash string, prikey []byte) (*SignaturePubkey, err
 	return calcSignaturePubkey(hash, prikey)
 }
 
-func InsertSignatureIntoEmptyTransaction(txHex string, txHashes []TxHash) (string, error) {
-	txBytes, err := hex.DecodeString(txHex)
+// 合并签名数据到空交易
+// rawTx : 原始空交易
+// txHashes : 签名信息
+func InsertSignatureIntoEmptyTransaction(rawTx string, txHashes []TxHash) (string, error) {
+	txBytes, err := hex.DecodeString(rawTx)
 	if err != nil {
 		return "", errors.New("Invalid transaction hex data!")
 	}
@@ -101,16 +116,18 @@ func InsertSignatureIntoEmptyTransaction(txHex string, txHashes []TxHash) (strin
 		return "", errors.New("Invalid empty transaction,no output found!")
 	}
 
-	script, err := createTxScript(txHashes[0].Normal.SigPub.Pubkey, txHashes[0].Normal.SigPub.Signature)
-	if err != nil {
-		return "", err
-	}
-
 	if emptyTrans.Scripts == nil {
 		emptyTrans.Scripts = make([]TxScript, 0)
 	}
 
-	emptyTrans.Scripts = append(emptyTrans.Scripts, *script)
+	for _, txHash := range txHashes {
+		script, err := createTxScript(txHash.Normal.SigPub.Pubkey, txHash.Normal.SigPub.Signature)
+		if err != nil {
+			return "", err
+		}
+
+		emptyTrans.Scripts = append(emptyTrans.Scripts, *script)
+	}
 
 	ret, err := emptyTrans.encodeToBytes()
 	if err != nil {
@@ -120,13 +137,7 @@ func InsertSignatureIntoEmptyTransaction(txHex string, txHashes []TxHash) (strin
 	return hex.EncodeToString(ret), nil
 }
 
-func SignatureRawTransaction(rawTransHex, pubKey string, signatureData []byte) (*[]byte, error) {
-	verifiBytes, err := BuildVerification(pubKey)
-	if err != nil {
-		return nil, err
-	}
-
-	invocationBytes := BuildInvocation(signatureData)
+func SignatureRawTransaction(rawTransHex string, signatureData []SignaturePubkey) (*[]byte, error) {
 
 	rawTxBytes, err := hex.DecodeString(rawTransHex)
 	if err != nil {
@@ -140,16 +151,27 @@ func SignatureRawTransaction(rawTransHex, pubKey string, signatureData []byte) (
 	if rtx.Scripts == nil {
 		rtx.Scripts = make([]TxScript, 0)
 	}
-	rtx.Scripts = append(rtx.Scripts, *(NewEmptyTxScript(invocationBytes, verifiBytes)))
+
+	for _, sd := range signatureData {
+		verifiBytes, err := BuildVerification(hex.EncodeToString(sd.Pubkey))
+		if err != nil {
+			return nil, err
+		}
+		invocationBytes := BuildInvocation(sd.Signature)
+		rtx.Scripts = append(rtx.Scripts, *(NewEmptyTxScript(invocationBytes, verifiBytes)))
+	}
 	sigRawTxBytes, err := rtx.encodeToBytes()
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(rtx.String())
 	return &sigRawTxBytes, nil
 }
 
-func VerifyRawTransaction(txHex string) bool {
-	txBytes, err := hex.DecodeString(txHex)
+// 验证交易签名
+// signedRawTx : 添加签名信息的原始交易
+func VerifyRawTransaction(signedRawTx string) bool {
+	txBytes, err := hex.DecodeString(signedRawTx)
 	if err != nil {
 		return false
 	}

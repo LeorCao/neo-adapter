@@ -22,7 +22,6 @@ import (
 	"github.com/LeorCao/neo-adapter/neoTransaction"
 	"github.com/blocktree/go-owcdrivers/omniTransaction"
 	"github.com/blocktree/openwallet/openwallet"
-	"github.com/prometheus/common/log"
 	"github.com/shopspring/decimal"
 	"sort"
 	"strings"
@@ -81,7 +80,7 @@ func (decoder *TransactionDecoder) CreateSummaryRawTransaction(wrapper openwalle
 	if sumRawTx.Coin.IsContract {
 		rawTxWithErrArray, err = decoder.CreateOmniSummaryRawTransaction(wrapper, sumRawTx)
 	} else {
-		rawTxWithErrArray, err = decoder.CreateBTCSummaryRawTransaction(wrapper, sumRawTx)
+		rawTxWithErrArray, err = decoder.CreateNEOSummaryRawTransaction(wrapper, sumRawTx)
 	}
 	if err != nil {
 		return nil, err
@@ -149,11 +148,11 @@ func (decoder *TransactionDecoder) SubmitRawTransaction(wrapper openwallet.Walle
 func (decoder *TransactionDecoder) CreateNEORawTransaction(wrapper openwallet.WalletDAI, rawTx *openwallet.RawTransaction) error {
 
 	var (
-		usedNEOUTXO  []*UnspentBalance
-		usedGASUTXO  []*UnspentBalance
-		outputAddrs  = make(map[string]decimal.Decimal)
-		neoBalance   = decimal.New(0, 0)
-		gasBalance   = decimal.New(0, 0)
+		usedNEOUTXO []*UnspentBalance
+		//usedGASUTXO  []*UnspentBalance
+		outputAddrs = make(map[string]decimal.Decimal)
+		neoBalance  = decimal.New(0, 0)
+		//gasBalance   = decimal.New(0, 0)
 		totalSend    = decimal.New(0, 0)
 		actualFees   = decimal.New(0, 0)
 		feesRate     = decimal.New(0, 0)
@@ -216,16 +215,16 @@ func (decoder *TransactionDecoder) CreateNEORawTransaction(wrapper openwallet.Wa
 		}
 	}})
 
-	gasUnspents := unspents
-	sort.Sort(UnspentSort{gasUnspents, func(a, b *UnspentBalance) int {
-		a_amount, _ := decimal.NewFromString(a.GASUnspent.Amount)
-		b_amount, _ := decimal.NewFromString(b.GASUnspent.Amount)
-		if a_amount.GreaterThan(b_amount) {
-			return 1
-		} else {
-			return -1
-		}
-	}})
+	//gasUnspents = unspents
+	//sort.Sort(UnspentSort{gasUnspents, func(a, b *UnspentBalance) int {
+	//	a_amount, _ := decimal.NewFromString(a.GASUnspent.Amount)
+	//	b_amount, _ := decimal.NewFromString(b.GASUnspent.Amount)
+	//	if a_amount.GreaterThan(b_amount) {
+	//		return 1
+	//	} else {
+	//		return -1
+	//	}
+	//}})
 
 	// 获取交易费
 	if len(rawTx.FeeRate) == 0 {
@@ -243,7 +242,7 @@ func (decoder *TransactionDecoder) CreateNEORawTransaction(wrapper openwallet.Wa
 	for {
 
 		usedNEOUTXO = make([]*UnspentBalance, 0)
-		usedGASUTXO = make([]*UnspentBalance, 0)
+		//usedGASUTXO = make([]*UnspentBalance, 0)
 		neoBalance = decimal.New(0, 0)
 
 		//计算一个可用于支付的余额
@@ -263,24 +262,24 @@ func (decoder *TransactionDecoder) CreateNEORawTransaction(wrapper openwallet.Wa
 		}
 
 		// 计算可用于交易的GAS地址
-		for _, u := range gasUnspents {
-			ua, _ := decimal.NewFromString(u.GASUnspent.Amount)
-			if ua.GreaterThan(decimal.Zero) {
-				gasBalance = gasBalance.Add(ua)
-				usedGASUTXO = append(usedGASUTXO, u)
-				if gasBalance.GreaterThanOrEqual(feesRate) {
-					break
-				}
-			}
-		}
+		//for _, u := range gasUnspents {
+		//	ua, _ := decimal.NewFromString(u.GASUnspent.Amount)
+		//	if ua.GreaterThan(decimal.Zero) {
+		//		gasBalance = gasBalance.Add(ua)
+		//		usedGASUTXO = append(usedGASUTXO, u)
+		//		if gasBalance.GreaterThanOrEqual(feesRate) {
+		//			break
+		//		}
+		//	}
+		//}
 
 		//计算手续费，找零地址有2个，一个是发送，一个是新创建的
-		fees, err := decoder.wm.EstimateFee(int64(len(usedNEOUTXO)), int64(len(destinations)+1), feesRate)
-		if err != nil {
-			return err
-		}
+		//fees, err := decoder.wm.EstimateFee(int64(len(usedNEOUTXO)), int64(len(destinations)+1), feesRate)
+		//if err != nil {
+		//	return err
+		//}
 
-		actualFees = fees
+		//actualFees = fees
 
 		break
 
@@ -358,17 +357,10 @@ func (decoder *TransactionDecoder) SignNEORawTransaction(wrapper openwallet.Wall
 
 			// 签名交易
 			// 交易单哈希签名
-			sigPub, err := neoTransaction.SignRawTransactionHash(rawTx.RawHex, keyBytes)
+			sigPub, err := neoTransaction.SignRawTransaction(rawTx.RawHex, keyBytes)
 			if err != nil {
 				return fmt.Errorf("transaction hash sign failed, unexpected error: %v", err)
 			}
-
-			//sigRawTx, err := neoTransaction.SignatureRawTransaction(rawTx.RawHex, hex.EncodeToString(sigPub.Pubkey), sigPub.Signature)
-			//if err != nil {
-			//	return err
-			//}
-			//
-			//rawTx.RawHex = hex.EncodeToString(*sigRawTx)
 
 			decoder.wm.Log.Info("Signature raw transaction : ", rawTx.RawHex)
 
@@ -383,8 +375,8 @@ func (decoder *TransactionDecoder) SignNEORawTransaction(wrapper openwallet.Wall
 func (decoder *TransactionDecoder) VerifyNEORawTransaction(wrapper openwallet.WalletDAI, rawTx *openwallet.RawTransaction) error {
 
 	var (
-		emptyTrans    = rawTx.RawHex
-		transHash     = make([]neoTransaction.TxHash, 0)
+		emptyTrans = rawTx.RawHex
+		transHash  = make([]neoTransaction.TxHash, 0)
 	)
 
 	if rawTx.Signatures == nil || len(rawTx.Signatures) == 0 {
@@ -930,10 +922,8 @@ func (decoder *TransactionDecoder) VerifyOmniRawTransaction(wrapper openwallet.W
 	return nil
 }
 
-//CreateBTCSummaryRawTransaction 创建BTC汇总交易
-func (decoder *TransactionDecoder) CreateBTCSummaryRawTransaction(wrapper openwallet.WalletDAI, sumRawTx *openwallet.SummaryRawTransaction) ([]*openwallet.RawTransactionWithError, error) {
-
-	return nil, nil
+//CreateNEOSummaryRawTransaction 创建NEO汇总交易
+func (decoder *TransactionDecoder) CreateNEOSummaryRawTransaction(wrapper openwallet.WalletDAI, sumRawTx *openwallet.SummaryRawTransaction) ([]*openwallet.RawTransactionWithError, error) {
 
 	//var (
 	//	feesRate       = decimal.New(0, 0)
@@ -1094,6 +1084,7 @@ func (decoder *TransactionDecoder) CreateBTCSummaryRawTransaction(wrapper openwa
 	//}
 	//
 	//return rawTxArray, nil
+	return nil, nil
 }
 
 //createNEORawTransaction 创建NEO原始交易单
@@ -1101,7 +1092,7 @@ func (decoder *TransactionDecoder) CreateBTCSummaryRawTransaction(wrapper openwa
 // rawTx : 交易原始数据
 // usedUTXO : 可以使用的UTXO
 // to : key : 交易接收地址 value : 输出的金额
-func (decoder *TransactionDecoder) createNEORawTransaction(wrapper openwallet.WalletDAI, rawTx *openwallet.RawTransaction, usedUTXO []*UnspentBalance, to map[string]decimal.Decimal) error {
+func (decoder *TransactionDecoder) createNEORawTransaction(wrapper openwallet.WalletDAI, rawTx *openwallet.RawTransaction, usedUtxos []*UnspentBalance, to map[string]decimal.Decimal) error {
 
 	var (
 		err              error
@@ -1113,9 +1104,10 @@ func (decoder *TransactionDecoder) createNEORawTransaction(wrapper openwallet.Wa
 		txFrom           = make([]string, 0)
 		txTo             = make([]string, 0)
 		accountID        = rawTx.Account.AccountID
+		limit            = 2000
 	)
 
-	if len(usedUTXO) == 0 {
+	if len(usedUtxos) == 0 {
 		return fmt.Errorf("utxo is empty")
 	}
 
@@ -1129,7 +1121,7 @@ func (decoder *TransactionDecoder) createNEORawTransaction(wrapper openwallet.Wa
 		totalSend = totalSend.Add(amount)
 		destinations = append(destinations, addr)
 		//计算账户的实际转账amount
-		addresses, findErr := wrapper.GetAddressList(0, -1, "AccountID", accountID, "Address", addr)
+		addresses, findErr := wrapper.GetAddressList(0, limit, "AccountID", accountID)
 		if findErr != nil || len(addresses) == 0 {
 			//amountDec, _ := decimal.NewFromString(amount)
 			accountTotalSent = accountTotalSent.Add(amount)
@@ -1137,21 +1129,16 @@ func (decoder *TransactionDecoder) createNEORawTransaction(wrapper openwallet.Wa
 	}
 
 	//UTXO如果大于设定限制，则分拆成多笔交易单发送
-	if len(usedUTXO) > decoder.wm.Config.MaxTxInputs {
+	if len(usedUtxos) > decoder.wm.Config.MaxTxInputs {
 		errStr := fmt.Sprintf("The transaction is use max inputs over: %d", decoder.wm.Config.MaxTxInputs)
 		return errors.New(errStr)
 	}
 
 	//装配输入
-	for _, utxo := range usedUTXO {
+	for _, utxo := range usedUtxos {
 
 		for _, tx := range *utxo.NEOUnspent.UnspentTxs {
-			value, err := decimal.NewFromString(tx.Value)
-			if err != nil {
-				log.Error(fmt.Sprintf("unspent tx : \"%s\" value to decimal error: %s", tx.TxID, err.Error()))
-				continue
-			}
-			in := neoTransaction.Vin{tx.TxID, uint16(value.IntPart())}
+			in := neoTransaction.Vin{tx.TxID, uint16(tx.N)}
 			vins = append(vins, in)
 		}
 
@@ -1182,19 +1169,21 @@ func (decoder *TransactionDecoder) createNEORawTransaction(wrapper openwallet.Wa
 	//装配签名
 	keySigs := make([]*openwallet.KeySignature, 0)
 
-	addr, err := wrapper.GetAddress(usedUTXO[0].Address)
-	if err != nil {
-		return err
-	}
+	for _, usedUtxo := range usedUtxos {
+		addr, err := wrapper.GetAddress(usedUtxo.Address)
+		if err != nil {
+			return err
+		}
 
-	signature := openwallet.KeySignature{
-		EccType: decoder.wm.Config.CurveType,
-		Nonce:   "",
-		Address: addr,
-		Message: "",
-	}
+		signature := openwallet.KeySignature{
+			EccType: decoder.wm.Config.CurveType,
+			Nonce:   "",
+			Address: addr,
+			Message: "",
+		}
 
-	keySigs = append(keySigs, &signature)
+		keySigs = append(keySigs, &signature)
+	}
 
 	feesDec, _ := decimal.NewFromString(rawTx.Fees)
 	accountTotalSent = accountTotalSent.Add(feesDec)
@@ -1637,7 +1626,7 @@ func (decoder *TransactionDecoder) CreateSummaryRawTransactionWithError(wrapper 
 	if sumRawTx.Coin.IsContract {
 		return decoder.CreateOmniSummaryRawTransaction(wrapper, sumRawTx)
 	} else {
-		return decoder.CreateBTCSummaryRawTransaction(wrapper, sumRawTx)
+		return decoder.CreateNEOSummaryRawTransaction(wrapper, sumRawTx)
 	}
 }
 

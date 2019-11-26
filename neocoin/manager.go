@@ -1027,7 +1027,7 @@ func (wm *WalletManager) ListUnspent(min uint64, addresses ...string) ([]*Unspen
 			}*/
 			pice, err = wm.getListUnspentByCore(min, addr)
 			if err != nil {
-				return nil, err
+				continue
 			}
 			utxo = append(utxo, pice)
 		}
@@ -1050,7 +1050,10 @@ func (wm *WalletManager) getListUnspentByCore(min uint64, addresse string) (*Uns
 		return nil, err
 	}
 
-	balance = NewUnspentBalance(result)
+	balance, err = NewUnspentBalance(result)
+	if err != nil {
+		return nil, err
+	}
 
 	return balance, nil
 }

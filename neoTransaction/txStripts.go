@@ -19,9 +19,10 @@ func NewEmptyTxScript(invocation, verification []byte) *TxScript {
 	}
 }
 
-// 构建验证脚本
-func BuildVerification(pubkey string) ([]byte, error) {
-	verif, err := hex.DecodeString(pubkey)
+// 构建验证脚本 = PushByte33(0x21) + 签名对应的公钥 + CheckSig(0xac)
+// pubKey : 签名对应的公钥
+func BuildVerification(pubKey string) ([]byte, error) {
+	verif, err := hex.DecodeString(pubKey)
 	if err != nil {
 		return nil, errors.New("Invalid public key!")
 	}
@@ -32,29 +33,39 @@ func BuildVerification(pubkey string) ([]byte, error) {
 
 // 获取验证脚本中的公钥
 func (ts *TxScript) GetPubKeyByVerificationScript() ([]byte, error) {
+	if ts == nil {
+		return nil, errors.New("Tx Script is nil!")
+	}
 	if len(ts.verificationScript) != 35 {
 		return nil, errors.New("Invalid verificationScript script length!")
 	}
 	return ts.verificationScript[1:34], nil
 }
 
+// 构建参数脚本 PushBytes64(0x40) + 签名，多签重复添加 0x40+签名
+// signBytes : 签名内容
+func BuildInvocation(signBytes []byte) []byte {
+	signBytes = append([]byte{OpPushBytes64}, signBytes...)
+	return signBytes
+}
+
 // 获取调用参数中的签名内容
 func (ts *TxScript) GetSignatureByInvocationScript() ([]byte, error) {
+	if ts == nil {
+		return nil, errors.New("Tx Script is nil!")
+	}
 	if len(ts.invocationScript) != 65 {
 		return nil, errors.New("Invalid invocationScript script length")
 	}
 	return ts.invocationScript[1:], nil
 }
 
-// 构建参数脚本
-func BuildInvocation(signByte []byte) []byte {
-	signByte = append([]byte{OpPushBytes64}, signByte...)
-	return signByte
-}
-
-func createTxScript(pubkey, signBytes []byte) (*TxScript, error) {
+// 创建交易见证人,并序列化交易
+// pubKey : 签名对应的公钥
+// signBytes : 签名
+func createTxScript(pubKeyBytes, signBytes []byte) (*TxScript, error) {
 	invocation := BuildInvocation(signBytes)
-	verification, err := BuildVerification(hex.EncodeToString(pubkey))
+	verification, err := BuildVerification(hex.EncodeToString(pubKeyBytes))
 	if err != nil {
 		return nil, err
 	}
@@ -64,6 +75,9 @@ func createTxScript(pubkey, signBytes []byte) (*TxScript, error) {
 	}, nil
 }
 
+// 反序列化交易见证人
+// txBytes : 交易序列化数据数组
+// index : 对应序列化数组的索引
 func decodeTxScriptVerificationFromRawTrans(txByte []byte, index int) ([]TxScript, int, error) {
 	var ret = make([]TxScript, 0)
 	scriptsCount := txByte[index]
@@ -86,6 +100,7 @@ func decodeTxScriptVerificationFromRawTrans(txByte []byte, index int) ([]TxScrip
 	return ret, index, nil
 }
 
+// 转换为 byte 数组
 func (ts TxScript) toBytes() ([]byte, error) {
 	var ret = make([]byte, 0)
 	ret = append(ret, byte(len(ts.invocationScript)))
@@ -93,11 +108,6 @@ func (ts TxScript) toBytes() ([]byte, error) {
 	ret = append(ret, byte(len(ts.verificationScript)))
 	ret = append(ret, ts.verificationScript...)
 	return ret, nil
-}
-
-func (ts *TxScript) setEmpty() {
-	ts.invocationScript = []byte{}
-	ts.verificationScript = []byte{}
 }
 
 func (ts *TxScript) String() string {

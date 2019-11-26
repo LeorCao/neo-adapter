@@ -13,19 +13,21 @@ type TxOut struct {
 	address []byte
 }
 
-func newTxOutForEmptyTrans(vout []Vout) ([]TxOut, error) {
-	if vout == nil || len(vout) == 0 {
+// 创建并序列化交易输出
+// vouts : 交易输出源数据
+func newTxOutForEmptyTrans(vouts []Vout) ([]TxOut, error) {
+	if vouts == nil || len(vouts) == 0 {
 		return nil, errors.New("No address to send when create an empty transaction!")
 	}
 	var ret []TxOut
 
-	for _, v := range vout {
+	for _, v := range vouts {
 		assetId, err := hex.DecodeString(v.Asset)
 		assetId = reverseByteArray(assetId)
 		if err != nil {
 			log.Error("Empty transaction asset to bytes error : ", err.Error())
 		}
-		value := uint64ToLittleEndianBytes(v.Value * 100000000)
+		value := uint64ToLittleEndianBytes(v.Value)
 		_, address, err := DecodeCheck(v.Address)
 		fmt.Println(len(address))
 		if err != nil {
@@ -37,6 +39,9 @@ func newTxOutForEmptyTrans(vout []Vout) ([]TxOut, error) {
 	return ret, nil
 }
 
+// 反序列化交易输出
+// txBytes : 空交易的序列化数组
+// index : 值在序列化数组中的索引
 func decodeTxOutFromRawTrans(txBytes []byte, index int) ([]TxOut, int, error) {
 	var txOuts = make([]TxOut, 0)
 	var voutCount = txBytes[index]
@@ -67,6 +72,7 @@ func decodeTxOutFromRawTrans(txBytes []byte, index int) ([]TxOut, int, error) {
 	return txOuts, index, nil
 }
 
+// 交易输出转换为字节数组
 func (out TxOut) toBytes() ([]byte, error) {
 	if out.value == nil || len(out.value) != 8 {
 		return nil, errors.New("Invalid amount for a transaction output!")
@@ -77,12 +83,6 @@ func (out TxOut) toBytes() ([]byte, error) {
 	ret = append(ret, out.value...)
 	ret = append(ret, out.address...)
 	return ret, nil
-}
-
-func (to *TxOut) setEmpty() {
-	to.asset = []byte{}
-	to.value = []byte{}
-	to.address = []byte{}
 }
 
 func (to *TxOut) String() string {

@@ -10,21 +10,25 @@ type TxIn struct {
 	vout []byte
 }
 
+// 获取交易ID
 func (in TxIn) GetTxID() string {
 	return reverseBytesToHex(in.txID)
 }
 
-func (in TxIn) GetVout() uint32 {
-	return littleEndianBytesToUint32(in.vout)
+// 获取对应索引
+func (in TxIn) GetVout() uint16 {
+	return littleEndianBytesToUint16(in.vout)
 }
 
-func newTxInForEmptyTrans(vin []Vin) ([]TxIn, error) {
-	if vin == nil || len(vin) == 0 {
+// 创建交易输入 并将字段值序列化
+// vins : 交易输入
+func newTxInForEmptyTrans(vins []Vin) ([]TxIn, error) {
+	if vins == nil || len(vins) == 0 {
 		return nil, errors.New("No input found when create an empty transaction!")
 	}
 	var ret []TxIn
 
-	for _, v := range vin {
+	for _, v := range vins {
 		txid, err := reverseHexToBytes(v.TxID)
 		reverseByteArray(txid)
 		if err != nil || len(txid) != 32 {
@@ -36,6 +40,9 @@ func newTxInForEmptyTrans(vin []Vin) ([]TxIn, error) {
 	return ret, nil
 }
 
+// 反序列化交易输入
+// txBytes : 交易输入的序列化值
+// index : 字段值在序列化数组中的索引
 func decodeTxInFromRawTrans(txBytes []byte, index int) ([]TxIn, int, error) {
 	var txIns = make([]TxIn, 0)
 	vinCount := txBytes[index]
@@ -62,6 +69,7 @@ func decodeTxInFromRawTrans(txBytes []byte, index int) ([]TxIn, int, error) {
 	return txIns, index, nil
 }
 
+// 将交易转换为字节数组
 func (in TxIn) toBytes() ([]byte, error) {
 	var ret []byte
 	ret = append(ret, in.txID...)
@@ -69,6 +77,7 @@ func (in TxIn) toBytes() ([]byte, error) {
 	return ret, nil
 }
 
+// 将输入设置为空
 func (in *TxIn) setEmpty() {
 	in.txID = []byte{}
 	in.vout = []byte{}

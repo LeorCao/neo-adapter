@@ -186,7 +186,12 @@ func (wm *WalletManager) listUnspentByExplorer(min uint64, address ...string) ([
 		return nil, err
 	}
 
-	utxos = append(utxos, NewUnspentBalance(result))
+	balance, err := NewUnspentBalance(result)
+	if err != nil {
+		return nil, err
+	}
+
+	utxos = append(utxos, balance)
 
 	return utxos, nil
 

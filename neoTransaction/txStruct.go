@@ -23,6 +23,11 @@ type Transaction struct {
 	Scripts    []TxScript
 }
 
+// 创建空交易
+// txType : 交易类型
+// vins : 交易输入
+// vouts : 交易输出
+// attributes : 交易附加信息
 func newEmptyTransaction(txType TransactionType, vins []Vin, vouts []Vout, attributes []Attribute) (*Transaction, error) {
 	txtype := txType.hexValue
 	txIn, err := newTxInForEmptyTrans(vins)
@@ -45,6 +50,7 @@ func newEmptyTransaction(txType TransactionType, vins []Vin, vouts []Vout, attri
 	return &Transaction{txtype, version, txAttributes, txOut, txIn, nil}, nil
 }
 
+// 交易序列化组装
 func (t Transaction) encodeToBytes() (ret []byte, err error) {
 	ret = append(ret, t.Type)
 	ret = append(ret, t.Version)
@@ -91,6 +97,7 @@ func (t Transaction) encodeToBytes() (ret []byte, err error) {
 	return ret, err
 }
 
+// 交易反序列化
 func DecodeRawTransaction(txBytes []byte) (*Transaction, error) {
 	limit := len(txBytes)
 
@@ -154,6 +161,7 @@ func DecodeRawTransaction(txBytes []byte) (*Transaction, error) {
 	return &rawTx, nil
 }
 
+// 复制空交易单
 func (t Transaction) cloneEmpty() Transaction {
 	var ret Transaction
 	ret.Type = t.Type
