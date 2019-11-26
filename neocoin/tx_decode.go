@@ -924,57 +924,56 @@ func (decoder *TransactionDecoder) VerifyOmniRawTransaction(wrapper openwallet.W
 
 //CreateNEOSummaryRawTransaction 创建NEO汇总交易
 func (decoder *TransactionDecoder) CreateNEOSummaryRawTransaction(wrapper openwallet.WalletDAI, sumRawTx *openwallet.SummaryRawTransaction) ([]*openwallet.RawTransactionWithError, error) {
+	var (
+		//feesRate       = decimal.New(0, 0)
+		accountID      = sumRawTx.Account.AccountID
+		minTransfer, _ = decimal.NewFromString(sumRawTx.MinTransfer)
+		//retainedBalance, _ = decimal.NewFromString(sumRawTx.RetainedBalance)
+		sumAddresses     = make([]string, 0)
+		rawTxArray       = make([]*openwallet.RawTransactionWithError, 0)
+		sumUnspents      []*UnspentBalance
+		outputAddrs      map[string]decimal.Decimal
+		totalInputAmount decimal.Decimal
+	)
 
-	//var (
-	//	feesRate       = decimal.New(0, 0)
-	//	accountID      = sumRawTx.Account.AccountID
-	//	minTransfer, _ = decimal.NewFromString(sumRawTx.MinTransfer)
-	//	//retainedBalance, _ = decimal.NewFromString(sumRawTx.RetainedBalance)
-	//	sumAddresses     = make([]string, 0)
-	//	rawTxArray       = make([]*openwallet.RawTransactionWithError, 0)
-	//	sumUnspents      []*Unspent
-	//	outputAddrs      map[string]decimal.Decimal
-	//	totalInputAmount decimal.Decimal
-	//)
-	//
-	////if minTransfer.LessThan(retainedBalance) {
-	////	return nil, fmt.Errorf("mini transfer amount must be greater than address retained balance")
-	////}
-	//
-	//address, err := wrapper.GetAddressList(sumRawTx.AddressStartIndex, sumRawTx.AddressLimit, "AccountID", sumRawTx.Account.AccountID)
-	//if err != nil {
-	//	return nil, err
+	//if minTransfer.LessThan(retainedBalance) {
+	//	return nil, fmt.Errorf("mini transfer amount must be greater than address retained balance")
 	//}
-	//
-	//if len(address) == 0 {
-	//	return nil, fmt.Errorf("[%s] have not addresses", accountID)
-	//}
-	//
-	//searchAddrs := make([]string, 0)
-	//for _, address := range address {
-	//	searchAddrs = append(searchAddrs, address.Address)
-	//}
-	//
-	//addrBalanceArray, err := decoder.wm.Blockscanner.GetBalanceByAddress(searchAddrs...)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//for _, addrBalance := range addrBalanceArray {
-	//	decoder.wm.Log.Debugf("addrBalance: %+v", addrBalance)
-	//	//检查余额是否超过最低转账
-	//	addrBalance_dec, _ := decimal.NewFromString(addrBalance.Balance)
-	//	if addrBalance_dec.GreaterThanOrEqual(minTransfer) {
-	//		//添加到转账地址数组
-	//		sumAddresses = append(sumAddresses, addrBalance.Address)
-	//	}
-	//}
-	//
-	//if len(sumAddresses) == 0 {
-	//	return nil, nil
-	//}
-	//
-	////取得费率
+
+	address, err := wrapper.GetAddressList(sumRawTx.AddressStartIndex, sumRawTx.AddressLimit, "AccountID", sumRawTx.Account.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(address) == 0 {
+		return nil, fmt.Errorf("[%s] have not addresses", accountID)
+	}
+
+	searchAddrs := make([]string, 0)
+	for _, address := range address {
+		searchAddrs = append(searchAddrs, address.Address)
+	}
+
+	addrBalanceArray, err := decoder.wm.Blockscanner.GetBalanceByAddress(searchAddrs...)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, addrBalance := range addrBalanceArray {
+		//decoder.wm.Log.Debugf("addrBalance: %+v", addrBalance)
+		//检查余额是否超过最低转账
+		addrBalance_dec, _ := decimal.NewFromString(addrBalance.Balance)
+		if addrBalance_dec.GreaterThanOrEqual(minTransfer) {
+			//添加到转账地址数组
+			sumAddresses = append(sumAddresses, addrBalance.Address)
+		}
+	}
+
+	if len(sumAddresses) == 0 {
+		return nil, nil
+	}
+
+	//取得费率
 	//if len(sumRawTx.FeeRate) == 0 {
 	//	feesRate, err = decoder.wm.EstimateFeeRate()
 	//	if err != nil {
@@ -983,108 +982,102 @@ func (decoder *TransactionDecoder) CreateNEOSummaryRawTransaction(wrapper openwa
 	//} else {
 	//	feesRate, _ = decimal.NewFromString(sumRawTx.FeeRate)
 	//}
-	//
-	//sumUnspents = make([]*Unspent, 0)
-	//outputAddrs = make(map[string]decimal.Decimal, 0)
-	//totalInputAmount = decimal.Zero
-	//
-	//for i, addr := range sumAddresses {
-	//
-	//	unspents, err := decoder.wm.ListUnspent(sumRawTx.Confirms, addr)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	//保留1个omni的最低转账成本的utxo 用于汇总omni
-	//	unspents = decoder.keepOmniCostUTXONotToUse(unspents)
-	//
-	//	//尽可能筹够最大input数
-	//	if len(unspents)+len(sumUnspents) < decoder.wm.Config.MaxTxInputs {
-	//		sumUnspents = append(sumUnspents, unspents...)
-	//		//if retainedBalance.GreaterThan(decimal.Zero) {
-	//		//	outputAddrs = appendOutput(outputAddrs, addr, retainedBalance)
-	//		//outputAddrs[addr] = retainedBalance.StringFixed(decoder.wm.Decimal())
-	//		//}
-	//		//decoder.wm.Log.Debugf("sumUnspents: %+v", sumUnspents)
-	//	}
-	//
-	//	//如果utxo已经超过最大输入，或遍历地址完结，就可以进行构建交易单
-	//	if i == len(sumAddresses)-1 || len(sumUnspents) >= decoder.wm.Config.MaxTxInputs {
-	//		//执行构建交易单工作
-	//		//decoder.wm.Log.Debugf("sumUnspents: %+v", sumUnspents)
-	//		//计算手续费，构建交易单inputs，地址保留余额>0，地址需要加入输出，最后+1是汇总地址
-	//		fees, createErr := decoder.wm.EstimateFee(int64(len(sumUnspents)), int64(len(outputAddrs)+1), feesRate)
-	//		if createErr != nil {
-	//			return nil, createErr
-	//		}
-	//
-	//		//计算这笔交易单的汇总数量
-	//		for _, u := range sumUnspents {
-	//
-	//			if u.Spendable {
-	//				ua, _ := decimal.NewFromString(u.Amount)
-	//				totalInputAmount = totalInputAmount.Add(ua)
-	//			}
-	//		}
-	//
-	//		/*
-	//
-	//				汇总数量计算：
-	//
-	//				1. 输入总数量 = 合计账户地址的所有utxo
-	//				2. 账户地址输出总数量 = 账户地址保留余额 * 地址数
-	//			    3. 汇总数量 = 输入总数量 - 账户地址输出总数量 - 手续费
-	//		*/
-	//		//retainedBalanceTotal := retainedBalance.Mul(decimal.New(int64(len(outputAddrs)), 0))
-	//		sumAmount := totalInputAmount.Sub(fees)
-	//
-	//		decoder.wm.Log.Debugf("totalInputAmount: %v", totalInputAmount)
-	//		//decoder.wm.Log.Debugf("retainedBalanceTotal: %v", retainedBalanceTotal)
-	//		decoder.wm.Log.Debugf("fees: %v", fees)
-	//		decoder.wm.Log.Debugf("sumAmount: %v", sumAmount)
-	//
-	//		if sumAmount.GreaterThan(decimal.Zero) {
-	//
-	//			//最后填充汇总地址及汇总数量
-	//			outputAddrs = appendOutput(outputAddrs, sumRawTx.SummaryAddress, sumAmount)
-	//			//outputAddrs[sumRawTx.SummaryAddress] = sumAmount.StringFixed(decoder.wm.Decimal())
-	//
-	//			raxTxTo := make(map[string]string, 0)
-	//			for a, m := range outputAddrs {
-	//				raxTxTo[a] = m.StringFixed(decoder.wm.Decimal())
-	//			}
-	//
-	//			//创建一笔交易单
-	//			rawTx := &openwallet.RawTransaction{
-	//				Coin:     sumRawTx.Coin,
-	//				Account:  sumRawTx.Account,
-	//				FeeRate:  sumRawTx.FeeRate,
-	//				To:       raxTxTo,
-	//				Fees:     fees.StringFixed(decoder.wm.Decimal()),
-	//				Required: 1,
-	//			}
-	//
-	//			createErr = decoder.createNEORawTransaction(wrapper, rawTx, sumUnspents, outputAddrs)
-	//			rawTxWithErr := &openwallet.RawTransactionWithError{
-	//				RawTx: rawTx,
-	//				Error: openwallet.ConvertError(createErr),
-	//			}
-	//
-	//			//创建成功，添加到队列
-	//			rawTxArray = append(rawTxArray, rawTxWithErr)
-	//
-	//		}
-	//
-	//		//清空临时变量
-	//		sumUnspents = make([]*Unspent, 0)
-	//		outputAddrs = make(map[string]decimal.Decimal, 0)
-	//		totalInputAmount = decimal.Zero
-	//
-	//	}
-	//}
-	//
-	//return rawTxArray, nil
-	return nil, nil
+
+	sumUnspents = make([]*UnspentBalance, 0)
+	outputAddrs = make(map[string]decimal.Decimal, 0)
+	totalInputAmount = decimal.Zero
+
+	for i, addr := range sumAddresses {
+
+		unspents, err := decoder.wm.ListUnspent(sumRawTx.Confirms, addr)
+		if err != nil {
+			return nil, err
+		}
+
+		//保留1个omni的最低转账成本的utxo 用于汇总omni
+		//unspents = decoder.keepOmniCostUTXONotToUse(unspents)
+
+		//尽可能筹够最大input数
+		if len(unspents)+len(sumUnspents) < decoder.wm.Config.MaxTxInputs {
+			sumUnspents = append(sumUnspents, unspents...)
+			//if retainedBalance.GreaterThan(decimal.Zero) {
+			//	outputAddrs = appendOutput(outputAddrs, addr, retainedBalance)
+			//outputAddrs[addr] = retainedBalance.StringFixed(decoder.wm.Decimal())
+			//}
+			//decoder.wm.Log.Debugf("sumUnspents: %+v", sumUnspents)
+		}
+
+		//如果utxo已经超过最大输入，或遍历地址完结，就可以进行构建交易单
+		if i == len(sumAddresses)-1 || len(sumUnspents) >= decoder.wm.Config.MaxTxInputs {
+			//执行构建交易单工作
+			//decoder.wm.Log.Debugf("sumUnspents: %+v", sumUnspents)
+			//计算手续费，构建交易单inputs，地址保留余额>0，地址需要加入输出，最后+1是汇总地址
+			//fees, createErr := decoder.wm.EstimateFee(int64(len(sumUnspents)), int64(len(outputAddrs)+1), feesRate)
+			//if createErr != nil {
+			//	return nil, createErr
+			//}
+
+			//计算这笔交易单的汇总数量
+			for _, u := range sumUnspents {
+				ua, _ := decimal.NewFromString(u.NEOUnspent.Amount)
+				totalInputAmount = totalInputAmount.Add(ua)
+			}
+
+			/*
+
+					汇总数量计算：
+
+					1. 输入总数量 = 合计账户地址的所有utxo
+					2. 账户地址输出总数量 = 账户地址保留余额 * 地址数
+				    3. 汇总数量 = 输入总数量 - 账户地址输出总数量 - 手续费
+			*/
+			//retainedBalanceTotal := retainedBalance.Mul(decimal.New(int64(len(outputAddrs)), 0))
+			//sumAmount := totalInputAmount.Sub(fees)
+
+			decoder.wm.Log.Debugf("totalInputAmount: %v", totalInputAmount)
+			//decoder.wm.Log.Debugf("retainedBalanceTotal: %v", retainedBalanceTotal)
+			//decoder.wm.Log.Debugf("fees: %v", fees)
+			decoder.wm.Log.Debugf("sumAmount: %v", totalInputAmount)
+
+			if totalInputAmount.GreaterThan(decimal.Zero) {
+
+				//最后填充汇总地址及汇总数量
+				outputAddrs = appendOutput(outputAddrs, sumRawTx.SummaryAddress, totalInputAmount)
+				//outputAddrs[sumRawTx.SummaryAddress] = sumAmount.StringFixed(decoder.wm.Decimal())
+
+				raxTxTo := make(map[string]string, 0)
+				for a, m := range outputAddrs {
+					raxTxTo[a] = m.StringFixed(decoder.wm.Decimal())
+				}
+
+				//创建一笔交易单
+				rawTx := &openwallet.RawTransaction{
+					Coin:    sumRawTx.Coin,
+					Account: sumRawTx.Account,
+					FeeRate: sumRawTx.FeeRate,
+					To:      raxTxTo,
+					//Fees:     fees.StringFixed(decoder.wm.Decimal()),
+					Required: 1,
+				}
+
+				createErr := decoder.createNEORawTransaction(wrapper, rawTx, sumUnspents, outputAddrs)
+				rawTxWithErr := &openwallet.RawTransactionWithError{
+					RawTx: rawTx,
+					Error: openwallet.ConvertError(createErr),
+				}
+
+				//创建成功，添加到队列
+				rawTxArray = append(rawTxArray, rawTxWithErr)
+
+			}
+
+			//清空临时变量
+			sumUnspents = make([]*UnspentBalance, 0)
+			outputAddrs = make(map[string]decimal.Decimal, 0)
+			totalInputAmount = decimal.Zero
+		}
+	}
+	return rawTxArray, nil
 }
 
 //createNEORawTransaction 创建NEO原始交易单
@@ -1657,8 +1650,8 @@ func (decoder *TransactionDecoder) getAssetsAccountUnspents(wrapper openwallet.W
 }
 
 //keepOmniCostUTXONotToUse，保留1个omni的最低转账成本的utxo 用于汇总omni
-func (decoder *TransactionDecoder) keepOmniCostUTXONotToUse(unspents []*Unspent) []*UnspentBalance {
-	//
+func (decoder *TransactionDecoder) keepOmniCostUTXONotToUse(unspents []*UnspentBalance) []*UnspentBalance {
+
 	//if !decoder.wm.Config.OmniSupport {
 	//	return unspents
 	//}
@@ -1688,7 +1681,7 @@ func (decoder *TransactionDecoder) keepOmniCostUTXONotToUse(unspents []*Unspent)
 	//	}
 	//	resultUTXO = append(resultUTXO, utxo)
 	//}
-	//
+
 	//return resultUTXO
 	return []*UnspentBalance{}
 }

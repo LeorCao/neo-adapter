@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	testApp        = "neo-adapter"
+	testApp        = "ethereum-adapter"
 	configFilePath = filepath.Join("conf")
 )
 

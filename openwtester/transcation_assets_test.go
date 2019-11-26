@@ -230,13 +230,9 @@ func TestTransfer_OMNI(t *testing.T) {
 
 func TestSummary(t *testing.T) {
 	tm := testInitWalletManager()
-	walletID := "W7tue6SDce38fPwerdKqyebUh6yo2nTQLC"
-	accountID := "EPxkNBu6iMospC6aHQppv36UGY4mb1WqUE7oNZ7Xp9Df"
-	summaryAddress := "mi9qsHKMqtrgnbxg7ifdPMk1LsFmen4xNn"
-
-	//walletID := "WAmTnvPKMWpJBqKk6cncFG3mTXz3iPmtzV"
-	//accountID := "86uUBCjk4SqEtMGDt92SQfn7YLhCZEcNQGjD5GhNNtSa"
-	//summaryAddress := "12kSR8J11Q1d8JiYwZn7DZsPoDoptME35y"
+	walletID := "WDevsJsYoZhHontinUFuAULAmctASCmNWw"
+	accountID := "Hj3LAoZbPwmv5T2ehjY43rYzS7sNzcihyF8uFHvt7hj9"
+	summaryAddress := "AemJEDk4ZAc6hvMWLrnrYigTsvKhujUGh2"
 
 	testGetAssetsAccountBalance(tm, walletID, accountID)
 
