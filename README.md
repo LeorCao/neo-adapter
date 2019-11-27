@@ -16,19 +16,21 @@ openwtester包下的测试用例已经集成了openwallet钱包体系，创建co
 isScan = true
 # RPC Server Type，0: CoreWallet RPC; 1: Explorer API
 rpcServerType = 0
-# node api url, if RPC Server Type = 0, use neo core full node
+# node api url, if RPC Server Type = 0, use bitcoin core full node
 serverAPI = "http://127.0.0.1:30333"
-# node api url, if RPC Server Type = 1, use neo insight-api
-#serverAPI = "http://127.0.0.1::20003/insight-api/"
+# node api url, if RPC Server Type = 1, use bitbay insight-api
+;serverAPI = "http://127.0.0.1::20003/insight-api/"
 # RPC Authentication Username
-rpcUser = "user-name"
+rpcUser = "bblink"
 # RPC Authentication Password
-rpcPassword = "password"
+rpcPassword = "9988119"
 # Is network test?
 isTestNet = true
 # support segWit
 supportSegWit = true
 # minimum transaction fees
 minFees = "0.00000001"
+# summary transaction max input. default value = 1
+summaryMaxInput = 1
 
 ```

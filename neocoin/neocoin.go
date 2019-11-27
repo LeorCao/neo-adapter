@@ -637,7 +637,7 @@ func (wm *WalletManager) LoadAssetsConfig(c config.Configer) error {
 	wm.Config.CalcFeesTransSize, _ = c.Int("calcFeesTransSize")
 	wm.Config.TransFeesScale, _ = decimal.NewFromString(c.String("transFeesScale"))
 	wm.Config.TransFeesFixed, _ = decimal.NewFromString(c.String("transFeesFixed"))
-	wm.Config.MaxTxInputs = c.DefaultInt("summaryMaxInput", 4)
+	wm.Config.MaxTxInputs = c.DefaultInt("summaryMaxInput", 1)
 
 	//数据文件夹
 	wm.Config.makeDataDir()
