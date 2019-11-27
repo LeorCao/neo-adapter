@@ -581,6 +581,7 @@ func (wm *WalletManager) GetAddressWithBalance(address ...*openwallet.Address) e
 	var (
 		addressMap  = make(map[string]*openwallet.Address)
 		searchAddrs = make([]string, 0)
+		utxos       = make([]UnspentBalance, 0)
 	)
 
 	//先加载是否有配置文件
@@ -595,12 +596,14 @@ func (wm *WalletManager) GetAddressWithBalance(address ...*openwallet.Address) e
 	}
 
 	//查找核心钱包确认数大于0的
-	utxos, err := wm.ListUnspent(0, searchAddrs...)
-	if err != nil {
-		return err
+	for _, searchAddr := range searchAddrs {
+		utxo, err := wm.ListUnspent(searchAddr)
+		if err != nil {
+			continue
+		}
+		utxos = append(utxos, *utxo)
 	}
 	log.Debug(utxos)
-	//balanceDel := decimal.New(0, 0)
 
 	//批量插入到本地数据库
 	//设置utxo的钱包账户
@@ -631,6 +634,10 @@ func (wm *WalletManager) LoadAssetsConfig(c config.Configer) error {
 	wm.Config.MinFees, _ = decimal.NewFromString(c.String("minFees"))
 	wm.Config.MinFees = wm.Config.MinFees.Round(wm.Decimal())
 	wm.Config.DataDir = c.String("dataDir")
+	wm.Config.CalcFeesTransSize, _ = c.Int("calcFeesTransSize")
+	wm.Config.TransFeesScale, _ = decimal.NewFromString(c.String("transFeesScale"))
+	wm.Config.TransFeesFixed, _ = decimal.NewFromString(c.String("transFeesFixed"))
+	wm.Config.MaxTxInputs = c.DefaultInt("summaryMaxInput", 4)
 
 	//数据文件夹
 	wm.Config.makeDataDir()

@@ -17,8 +17,8 @@ package neocoin
 
 import (
 	"encoding/hex"
+	"fmt"
 	"github.com/blocktree/go-owcdrivers/addressEncoder"
-	"github.com/blocktree/go-owcrypt"
 	"testing"
 )
 
@@ -60,67 +60,64 @@ func TestAddressDecoder_Decode(t *testing.T) {
 
 }
 
+func initAddressDecode() *addressDecoder {
+	tm := NewWalletManager()
+	return NewAddressDecoder(tm)
+}
+
+// 测试私钥转WIF
+func TestAddressDecoder_PrivateKeyToWIF(t *testing.T) {
+	ad := initAddressDecode()
+	privKeyBytes, err := hex.DecodeString("c0d97e2484b40e4a6f9cb471545973d635e495e1a469176d0604bdc62c441e1b")
+	if err != nil {
+		t.Error("Invalid private key!")
+		return
+	}
+	wif, err := ad.PrivateKeyToWIF(privKeyBytes, true)
+	if err != nil {
+		t.Errorf("Private key to wif error : %s!", err.Error())
+		return
+	}
+	wifExpect := "L3gau692aVdF8ESjuWKsoaew7Nu1uuRUfarf3VDc7LgkShCCkvyA"
+	if wif != wifExpect {
+		fmt.Println(fmt.Sprintf("wif not expected outcome!"))
+	}
+	fmt.Println(fmt.Sprintf("WIF : %s", wif))
+}
+
+// 测试公钥转地址
 func TestAddressDecoder_PublicKeyToAddress(t *testing.T) {
-	addr := "036943c02168ce22fb2e48a3f92dd72336d295e793a52633beba22ac46916dc201"
-
-	cfg := NEO_mainnetAddressP2PKH
-
-	hash, err := addressEncoder.AddressDecode(addr, cfg)
+	ad := initAddressDecode()
+	pubKeyBytes, err := hex.DecodeString("036fb24ad1e6792d686fe8b37ceffbd1a5f2d30f05697bb10919bd778f91842a64")
 	if err != nil {
-		t.Errorf("AddressDecode failed unexpected error: %v\n", err)
+		t.Error("Invalid public key!")
 		return
 	}
-	t.Logf("hash: %s", hex.EncodeToString(hash))
+	addr, err := ad.PublicKeyToAddress(pubKeyBytes, true)
+	if err != nil {
+		t.Errorf("Public key to address error : %s", err.Error())
+		return
+	}
+	addrExpect := "AemJEDk4ZAc6hvMWLrnrYigTsvKhujUGh2"
+	if addr != addrExpect {
+		t.Error("Public key to address not be expected outcome!")
+		return
+	}
+	fmt.Println(fmt.Sprintf("Address : %s", addr))
 }
 
-func TestAddressDecoder_ScriptPubKeyToBech32Address(t *testing.T) {
-
-	scriptPubKey, _ := hex.DecodeString("002079db247b3da5d5e33e036005911b9341a8d136768a001e9f7b86c5211315e3e1")
-
-	addr, err := scriptPubKeyToBech32Address(scriptPubKey, true)
+// 测试WIF转私钥
+func TestAddressDecoder_WIFToPrivateKey(t *testing.T) {
+	ad := initAddressDecode()
+	wifBytes := "L3gau692aVdF8ESjuWKsoaew7Nu1uuRUfarf3VDc7LgkShCCkvyA"
+	privKeyBytes, err := ad.WIFToPrivateKey(wifBytes, true)
 	if err != nil {
-		t.Errorf("ScriptPubKeyToBech32Address failed unexpected error: %v\n", err)
-		return
-	}
-	t.Logf("addr: %s", addr)
-
-	t.Logf("addr: %s", addr)
-}
-
-func TestAddressDecoder_WIFToP2WPKH_nested_in_P2SH(t *testing.T) {
-	wif := "KxDgvEKzgSBPPfuVfw67oPQBSjidEiqTHURKSDL1R7yGaGYAeYnr"
-
-	priv := "1dd37fba80fec4e6a6f13fd708d8dcb3b29def768017052f6c930fa1c5d90bbb"
-	pub := "031a6c6fbbdf02ca351745fa86b9ba5a9452d785ac4f7fc2b7548ca2a46c4fcf4a"
-
-	privkey, err := addressEncoder.AddressDecode(wif, NEO_mainnetPrivateWIFCompressed)
-	if err != nil {
-		t.Errorf("AddressDecode failed unexpected error: %v\n", err)
-		return
-	}
-	if priv != hex.EncodeToString(privkey) {
-		t.Failed()
-	}
-	t.Logf("privkey: %s", hex.EncodeToString(privkey))
-
-	pubkey, _ := owcrypt.GenPubkey(privkey, owcrypt.ECC_CURVE_SECP256R1)
-	pubkey = owcrypt.PointCompress(pubkey, owcrypt.ECC_CURVE_SECP256R1)
-
-	if pub != hex.EncodeToString(pubkey) {
-		t.Failed()
+		t.Errorf("WIF to private key error : %s", err.Error())
 	}
 
-	t.Logf("pubkey: %s", hex.EncodeToString(pubkey))
-
-	pubkey = append([]byte{0x21}, pubkey...)
-	pubkey = append(pubkey, 0xac)
-
-	hash := owcrypt.Hash(pubkey, 0, owcrypt.HASH_ALG_SHA256)
-	hash = owcrypt.Hash(hash, 0, owcrypt.HASH_ALG_RIPEMD160)
-
-	t.Logf("hash: %s", hex.EncodeToString(hash))
-
-	addr := addressEncoder.AddressEncode(hash, NEO_mainnetAddressP2PKH)
-
-	t.Logf("addr: %s", addr)
+	privKeyExpect := "c0d97e2484b40e4a6f9cb471545973d635e495e1a469176d0604bdc62c441e1b"
+	if hex.EncodeToString(privKeyBytes) != privKeyExpect {
+		t.Error("WIF to private key not be expected outcome!")
+	}
+	fmt.Println(fmt.Sprintf("Private key : %s", hex.EncodeToString(privKeyBytes)))
 }

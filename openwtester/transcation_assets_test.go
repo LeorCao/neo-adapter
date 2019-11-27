@@ -43,12 +43,6 @@ func testGetAssetsAccountTokenBalance(tm *openw.WalletManager, walletID, account
 
 func testCreateTransactionStep(tm *openw.WalletManager, walletID, accountID, to, amount, feeRate string, contract *openwallet.SmartContract) (*openwallet.RawTransaction, error) {
 
-	//err := tm.RefreshAssetsAccountBalance(testApp, accountID)
-	//if err != nil {
-	//	log.Error("RefreshAssetsAccountBalance failed, unexpected error:", err)
-	//	return nil, err
-	//}
-
 	rawTx, err := tm.CreateTransaction(testApp, walletID, accountID, amount, to, feeRate, "", contract)
 
 	if err != nil {
@@ -79,7 +73,7 @@ func testCreateSummaryTransactionStep(
 
 func testSignTransactionStep(tm *openw.WalletManager, rawTx *openwallet.RawTransaction) (*openwallet.RawTransaction, error) {
 
-	_, err := tm.SignTransaction(testApp, rawTx.Account.WalletID, rawTx.Account.AccountID, "12345678", rawTx)
+	_, err := tm.SignTransaction(testApp, rawTx.Account.WalletID, rawTx.Account.AccountID, "anc123", rawTx)
 	if err != nil {
 		log.Error("SignTransaction failed, unexpected error:", err)
 		return nil, err
@@ -90,8 +84,6 @@ func testSignTransactionStep(tm *openw.WalletManager, rawTx *openwallet.RawTrans
 }
 
 func testVerifyTransactionStep(tm *openw.WalletManager, rawTx *openwallet.RawTransaction) (*openwallet.RawTransaction, error) {
-
-	//log.Info("rawTx.Signatures:", rawTx.Signatures)
 
 	_, err := tm.VerifyTransaction(testApp, rawTx.Account.WalletID, rawTx.Account.AccountID, rawTx)
 	if err != nil {
@@ -120,28 +112,14 @@ func testSubmitTransactionStep(tm *openw.WalletManager, rawTx *openwallet.RawTra
 
 func TestTransfer(t *testing.T) {
 
-	//mi9qsHKMqtrgnbxg7ifdPMk1LsFmen4xNn
-	//mjbVUivVbQuh4PdW4Z7mxvQb99FJ62EQdC
-	//mjjH75fZrDbAQUg9s3mq9qKwP6jDzryijP
-	//mk44BMmg8YPRjxui7SvZ9GAv4VxMcwJhFY
-	//mnSPBLZA5X75R8mnYRsjjTnzz38NmL9RPd
-	//mqzv5TsejXzCRQB3hTKk6emvjocSoq291Z
-
 	tm := testInitWalletManager()
-	walletID := "W7tue6SDce38fPwerdKqyebUh6yo2nTQLC"
-	accountID := "FqQBQ8Bn26GogR7UAu6e2ZVhrYYmKUpmBS7CSM1KLTTZ"
-	to := "mkUDixUXqgUqGPEGEtxJUoQBvpDeSnjL2Z"
-
-	//walletID := "WAmTnvPKMWpJBqKk6cncFG3mTXz3iPmtzV"
-	//accountID := "21Vn4NEmXT6DRy2EfdPTAJCS2kYTACTuconBer8AQ1cz"
-	//to := "113A2SJLmdSqkn4MuQckPZwytWyj2snYs"
-
-	//accountID := "EPxkNBu6iMospC6aHQppv36UGY4mb1WqUE7oNZ7Xp9Df"
-	//to := "mi9qsHKMqtrgnbxg7ifdPMk1LsFmen4xNn"
+	walletID := "WDevsJsYoZhHontinUFuAULAmctASCmNWw"
+	accountID := "6v9scZYo4L7phtUs74FRzAWHf9XUcG8qker6TxbghanZ"
+	to := "AemJEDk4ZAc6hvMWLrnrYigTsvKhujUGh2"
 
 	testGetAssetsAccountBalance(tm, walletID, accountID)
 
-	rawTx, err := testCreateTransactionStep(tm, walletID, accountID, to, "0.001", "", nil)
+	rawTx, err := testCreateTransactionStep(tm, walletID, accountID, to, "5", "", nil)
 	if err != nil {
 		return
 	}
@@ -163,44 +141,20 @@ func TestTransfer(t *testing.T) {
 
 }
 
-
 func TestTransfer_OMNI(t *testing.T) {
 
-	//mkJrhf8Bp3RWfL5eyatcfqPBDDUUXgHQYm
-	//mkUDixUXqgUqGPEGEtxJUoQBvpDeSnjL2Z
-	//mkzbZ9557cvXAEpvCSQypDoXRiVb8dCtEV
-	//mqUoroU8ttLBNgCatzAgBtvyMYM8M1tN8d
-	//mu9ZjobWsHr2KxLG3ELJTRkYJzRLsSqNCX
-	//mwawxdBn9w4CPxic961vPnyj9HqDVGnkth
-
 	tm := testInitWalletManager()
-	walletID := "W7tue6SDce38fPwerdKqyebUh6yo2nTQLC"
-	accountID := "FqQBQ8Bn26GogR7UAu6e2ZVhrYYmKUpmBS7CSM1KLTTZ"
-	to := "mkUDixUXqgUqGPEGEtxJUoQBvpDeSnjL2Z"
-
-	//walletID := "WAmTnvPKMWpJBqKk6cncFG3mTXz3iPmtzV"
-	//accountID := "21Vn4NEmXT6DRy2EfdPTAJCS2kYTACTuconBer8AQ1cz"
-	//to := "1Jm2mff8JUdGwxxjKV6SZtMRhh6pMpQXq5"
-	//to := "117ZBK2KvV5XZ6Q57MDbvTz4xB8Q9f9vx"
-
-	//accountID := "86uUBCjk4SqEtMGDt92SQfn7YLhCZEcNQGjD5GhNNtSa"
-	//to := "12kSR8J11Q1d8JiYwZn7DZsPoDoptME35y"
+	walletID := "WDevsJsYoZhHontinUFuAULAmctASCmNWw"
+	accountID := "Hj3LAoZbPwmv5T2ehjY43rYzS7sNzcihyF8uFHvt7hj9"
+	to := "AemJEDk4ZAc6hvMWLrnrYigTsvKhujUGh2"
 
 	contract := openwallet.SmartContract{
 		Address:  "2",
-		Symbol:   "BTC",
+		Symbol:   "NEO",
 		Name:     "Test Omni",
 		Token:    "Omni",
 		Decimals: 8,
 	}
-
-	//contract := openwallet.SmartContract{
-	//	Address:  "31",
-	//	Symbol:   "BTC",
-	//	Name:     "TetherUSD",
-	//	Token:    "USDT",
-	//	Decimals: 8,
-	//}
 
 	testGetAssetsAccountBalance(tm, walletID, accountID)
 

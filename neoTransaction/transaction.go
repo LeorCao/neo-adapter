@@ -93,27 +93,27 @@ func SignRawTransaction(rawTx string, prikey []byte) (*SignaturePubkey, error) {
 // 合并签名数据到空交易
 // rawTx : 原始空交易
 // txHashes : 签名信息
-func InsertSignatureIntoEmptyTransaction(rawTx string, txHashes []TxHash) (string, error) {
+func InsertSignatureIntoEmptyTransaction(rawTx string, txHashes []TxHash) ([]byte, error) {
 	txBytes, err := hex.DecodeString(rawTx)
 	if err != nil {
-		return "", errors.New("Invalid transaction hex data!")
+		return nil, errors.New("Invalid transaction hex data!")
 	}
 
 	emptyTrans, err := DecodeRawTransaction(txBytes)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if txHashes == nil || len(txHashes) == 0 {
-		return "", errors.New("No signature data found!")
+		return nil, errors.New("No signature data found!")
 	}
 
 	if emptyTrans.Vins == nil || len(emptyTrans.Vins) == 0 {
-		return "", errors.New("Invalid empty transaction,no input found!")
+		return nil, errors.New("Invalid empty transaction,no input found!")
 	}
 
 	if emptyTrans.Vouts == nil || len(emptyTrans.Vouts) == 0 {
-		return "", errors.New("Invalid empty transaction,no output found!")
+		return nil, errors.New("Invalid empty transaction,no output found!")
 	}
 
 	if emptyTrans.Scripts == nil {
@@ -123,49 +123,20 @@ func InsertSignatureIntoEmptyTransaction(rawTx string, txHashes []TxHash) (strin
 	for _, txHash := range txHashes {
 		script, err := createTxScript(txHash.Normal.SigPub.Pubkey, txHash.Normal.SigPub.Signature)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		emptyTrans.Scripts = append(emptyTrans.Scripts, *script)
 	}
 
+	fmt.Println("============================>>", emptyTrans.String())
+
 	ret, err := emptyTrans.encodeToBytes()
 	if err != nil {
-		return "", err
-	}
-
-	return hex.EncodeToString(ret), nil
-}
-
-func SignatureRawTransaction(rawTransHex string, signatureData []SignaturePubkey) (*[]byte, error) {
-
-	rawTxBytes, err := hex.DecodeString(rawTransHex)
-	if err != nil {
 		return nil, err
 	}
 
-	rtx, err := DecodeRawTransaction(rawTxBytes)
-	if err != nil {
-		return nil, err
-	}
-	if rtx.Scripts == nil {
-		rtx.Scripts = make([]TxScript, 0)
-	}
-
-	for _, sd := range signatureData {
-		verifiBytes, err := BuildVerification(hex.EncodeToString(sd.Pubkey))
-		if err != nil {
-			return nil, err
-		}
-		invocationBytes := BuildInvocation(sd.Signature)
-		rtx.Scripts = append(rtx.Scripts, *(NewEmptyTxScript(invocationBytes, verifiBytes)))
-	}
-	sigRawTxBytes, err := rtx.encodeToBytes()
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println(rtx.String())
-	return &sigRawTxBytes, nil
+	return ret, nil
 }
 
 // 验证交易签名

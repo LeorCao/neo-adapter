@@ -361,7 +361,7 @@ func TestListUnspent(t *testing.T) {
 	//}
 
 	//for _, u := range utxos {
-		//t.Logf("ListUnspent %s: %s = %s\n", u.Address, u.AccountID)
+	//t.Logf("ListUnspent %s: %s = %s\n", u.Address, u.AccountID)
 	//}
 }
 
@@ -522,4 +522,14 @@ func TestWalletManager_ImportAddress(t *testing.T) {
 		return
 	}
 	log.Info("imported success")
+}
+
+func TestWalletManager_ListUnspent(t *testing.T) {
+	addr := "AJ2FKZSLhhi3865SWZXh2htpNUcLnmrH4V"
+	utxo, err := tw.ListUnspent(addr)
+	if err != nil {
+		t.Errorf("List unspent error : %s", err.Error())
+		return
+	}
+	fmt.Println(fmt.Sprintf("Address %s utxo : %v", addr, *utxo))
 }

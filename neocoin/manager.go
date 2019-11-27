@@ -986,63 +986,16 @@ func (wm *WalletManager) GetBlockChainInfo() (*BlockchainInfo, error) {
 }
 
 //ListUnspent 获取未花记录
-func (wm *WalletManager) ListUnspent(min uint64, addresses ...string) ([]*UnspentBalance, error) {
-
-	//:分页限制
-
-	var (
-		limit       = 100
-		searchAddrs = make([]string, 0)
-		max         = len(addresses)
-		step        = max / limit
-		utxo        = make([]*UnspentBalance, 0)
-		pice        *UnspentBalance
-		err         error
-	)
-
-	for i := 0; i <= step; i++ {
-		begin := i * limit
-		end := (i + 1) * limit
-		if end > max {
-			end = max
-		}
-
-		searchAddrs = addresses[begin:end]
-
-		if len(searchAddrs) == 0 {
-			continue
-		}
-
-		for _, addr := range searchAddrs {
-			/*if wm.Config.RPCServerType == RPCServerExplorer {
-				pice, err = wm.listUnspentByExplorer(min, addr)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				pice, err = wm.getListUnspentByCore(min, addr)
-				if err != nil {
-					return nil, err
-				}
-			}*/
-			pice, err = wm.getListUnspentByCore(min, addr)
-			if err != nil {
-				continue
-			}
-			utxo = append(utxo, pice)
-		}
-
+func (wm *WalletManager) ListUnspent(address string) (*UnspentBalance, error) {
+	utxo, err := wm.getListUnspentByCore(address)
+	if err != nil {
+		return nil, err
 	}
 	return utxo, nil
 }
 
 //getTransactionByCore 获取交易单 neo 的 getunspents 接口一次请求只接收一个地址，传入多个地址默认只返回第一个地址的utxo信息
-func (wm *WalletManager) getListUnspentByCore(min uint64, addresse string) (*UnspentBalance, error) {
-
-	var (
-		balance = new(UnspentBalance)
-	)
-
+func (wm *WalletManager) getListUnspentByCore(addresse string) (*UnspentBalance, error) {
 	request := []interface{}{addresse}
 
 	result, err := wm.WalletClient.Call("getunspents", request)
@@ -1050,12 +1003,7 @@ func (wm *WalletManager) getListUnspentByCore(min uint64, addresse string) (*Uns
 		return nil, err
 	}
 
-	balance, err = NewUnspentBalance(result)
-	if err != nil {
-		return nil, err
-	}
-
-	return balance, nil
+	return NewUnspentBalance(result), nil
 }
 
 //RebuildWalletUnspent 批量插入未花记录到本地
@@ -1063,6 +1011,7 @@ func (wm *WalletManager) RebuildWalletUnspent(walletID string) error {
 
 	var (
 		wallet *openwallet.Wallet
+		utxos  = make([]UnspentBalance, 0)
 	)
 
 	wallets, err := wm.GetWallets()
@@ -1082,10 +1031,15 @@ func (wm *WalletManager) RebuildWalletUnspent(walletID string) error {
 		return errors.New("The wallet that your given name is not exist!")
 	}
 
-	//查找核心钱包确认数大于1的
-	utxos, err := wm.ListUnspent(0)
-	if err != nil {
-		return err
+	addresses := wallet.GetAddressesByAccount(walletID)
+
+	for _, address := range addresses {
+		//查找核心钱包确认数大于1的
+		utxo, err := wm.ListUnspent(address.Address)
+		if err != nil {
+			return err
+		}
+		utxos = append(utxos, *utxo)
 	}
 
 	db, err := wallet.OpenDB()

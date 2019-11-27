@@ -45,7 +45,7 @@ const (
 	MasterKey = "Neocoin seed"
 	CurveType = owcrypt.ECC_CURVE_SECP256R1
 	Decimals  = int32(8)
-	
+
 	AssetSymbolGAS = "GAS" // UTXO 中的 GAS 符号
 	AssetSymbolNEO = "NEO" // UTXO 中的 NEO 符号
 
@@ -140,6 +140,12 @@ type WalletConfig struct {
 	MinFees decimal.Decimal
 	//数据目录
 	DataDir string
+	// 交易大小需要计算交易费的限制
+	CalcFeesTransSize int
+	// 交易大小超出限制计算比例值
+	TransFeesScale decimal.Decimal
+	// 超出限制固定值
+	TransFeesFixed decimal.Decimal
 }
 
 func NewConfig(symbol string, curveType uint32, decimals int32) *WalletConfig {
@@ -174,8 +180,6 @@ func NewConfig(symbol string, curveType uint32, decimals int32) *WalletConfig {
 	c.IsTestNet = true
 	// 核心钱包是否只做监听
 	c.CoreWalletWatchOnly = true
-	//最大的输入数量
-	c.MaxTxInputs = 50
 	//本地数据库文件路径
 	c.DBPath = filepath.Join("data", strings.ToLower(c.Symbol), "db")
 	//备份路径

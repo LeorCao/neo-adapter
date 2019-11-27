@@ -16,25 +16,10 @@
 package neocoin
 
 import (
-	"fmt"
-	"github.com/blocktree/openwallet/openwallet"
-
 	"github.com/blocktree/go-owcdrivers/addressEncoder"
 	"github.com/blocktree/go-owcrypt"
+	"github.com/blocktree/openwallet/openwallet"
 )
-
-func init() {
-
-}
-
-//var (
-//	AddressDecoder = &openwallet.AddressDecoder{
-//		PrivateKeyToWIF:    PrivateKeyToWIF,
-//		PublicKeyToAddress: PublicKeyToAddress,
-//		WIFToPrivateKey:    WIFToPrivateKey,
-//		RedeemScriptToAddress: RedeemScriptToAddress,
-//	}
-//)
 
 type AddressDecoder interface {
 	openwallet.AddressDecoder
@@ -43,6 +28,14 @@ type AddressDecoder interface {
 
 type addressDecoder struct {
 	wm *WalletManager //钱包管理者
+}
+
+func (decoder *addressDecoder) RedeemScriptToAddress(pubs [][]byte, required uint64, isTestnet bool) (string, error) {
+	panic("implement me")
+}
+
+func (decoder *addressDecoder) ScriptPubKeyToBech32Address(scriptPubKey []byte) (string, error) {
+	panic("implement me")
 }
 
 //NewAddressDecoder 地址解析器
@@ -54,22 +47,12 @@ func NewAddressDecoder(wm *WalletManager) *addressDecoder {
 
 //PrivateKeyToWIF 私钥转WIF
 func (decoder *addressDecoder) PrivateKeyToWIF(priv []byte, isTestnet bool) (string, error) {
-
 	cfg := NEO_mainnetPrivateWIFCompressed
 	if decoder.wm.Config.IsTestNet {
 		cfg = NEO_testnetPrivateWIFCompressed
 	}
 
-	//privateKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), priv)
-	//wif, err := btcutil.NewWIF(privateKey, &cfg, true)
-	//if err != nil {
-	//	return "", err
-	//}
-
-	wif := addressEncoder.AddressEncode(priv, cfg)
-
-	return wif, nil
-
+	return addressEncoder.AddressEncode(priv, cfg), nil
 }
 
 //PublicKeyToAddress 公钥转地址
@@ -91,34 +74,12 @@ func (decoder *addressDecoder) PublicKeyToAddress(pub []byte, isTestnet bool) (s
 
 }
 
-//RedeemScriptToAddress 多重签名赎回脚本转地址
-func (decoder *addressDecoder) RedeemScriptToAddress(pubs [][]byte, required uint64, isTestnet bool) (string, error) {
-
-	cfg := addressEncoder.BTC_mainnetAddressP2SH
-	if decoder.wm.Config.IsTestNet {
-		cfg = addressEncoder.BTC_testnetAddressP2SH
-	}
-
-	redeemScript := make([]byte, 0)
-
-	for _, pub := range pubs {
-		redeemScript = append(redeemScript, pub...)
-	}
-
-	pkHash := owcrypt.Hash(redeemScript, 0, owcrypt.HASH_ALG_HASH160)
-
-	address := addressEncoder.AddressEncode(pkHash, cfg)
-
-	return address, nil
-
-}
-
 //WIFToPrivateKey WIF转私钥
 func (decoder *addressDecoder) WIFToPrivateKey(wif string, isTestnet bool) ([]byte, error) {
 
-	cfg := addressEncoder.BTC_mainnetPrivateWIFCompressed
+	cfg := NEO_mainnetPrivateWIFCompressed
 	if decoder.wm.Config.IsTestNet {
-		cfg = addressEncoder.BTC_testnetPrivateWIFCompressed
+		cfg = NEO_testnetPrivateWIFCompressed
 	}
 
 	priv, err := addressEncoder.AddressDecode(wif, cfg)
@@ -127,36 +88,5 @@ func (decoder *addressDecoder) WIFToPrivateKey(wif string, isTestnet bool) ([]by
 	}
 
 	return priv, err
-
-}
-
-//ScriptPubKeyToBech32Address scriptPubKey转Bech32地址
-func (decoder *addressDecoder) ScriptPubKeyToBech32Address(scriptPubKey []byte) (string, error) {
-	return scriptPubKeyToBech32Address(scriptPubKey, decoder.wm.Config.IsTestNet)
-
-}
-
-//ScriptPubKeyToBech32Address scriptPubKey转Bech32地址
-func scriptPubKeyToBech32Address(scriptPubKey []byte, isTestNet bool) (string, error) {
-	var (
-		hash []byte
-	)
-
-	cfg := addressEncoder.BTC_mainnetAddressBech32V0
-	if isTestNet {
-		cfg = addressEncoder.BTC_testnetAddressBech32V0
-	}
-
-	if len(scriptPubKey) == 22 || len(scriptPubKey) == 34 {
-
-		hash = scriptPubKey[2:]
-
-		address := addressEncoder.AddressEncode(hash, cfg)
-
-		return address, nil
-
-	} else {
-		return "", fmt.Errorf("scriptPubKey length is invalid")
-	}
 
 }

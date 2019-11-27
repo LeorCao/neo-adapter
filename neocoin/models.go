@@ -17,7 +17,6 @@ package neocoin
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"github.com/blocktree/openwallet/crypto"
 	"github.com/blocktree/openwallet/openwallet"
@@ -135,13 +134,10 @@ type UnspentTx struct {
 	Value string `json:"value"`
 }
 
-func NewUnspentBalance(json *gjson.Result) (*UnspentBalance, error) {
+func NewUnspentBalance(json *gjson.Result) *UnspentBalance {
 	obj := &UnspentBalance{}
 	//解析json
 	arr := json.Get("balance").Array()
-	if len(arr) == 0 {
-		return nil, errors.New("Balance is nil!")
-	}
 	for _, a := range arr {
 		unspent := NewUnspent(&a)
 		if unspent.AssetSymbol == AssetSymbolGAS {
@@ -152,7 +148,7 @@ func NewUnspentBalance(json *gjson.Result) (*UnspentBalance, error) {
 	}
 	obj.Address = gjson.Get(json.Raw, "address").String()
 
-	return obj, nil
+	return obj
 }
 
 func NewUnspent(json *gjson.Result) *Unspent {

@@ -17,15 +17,17 @@ func TestReverseHex(t *testing.T) {
 func Test_case1(t *testing.T) {
 
 	// 前置交易ID和UTXO对应的索引
-	in1 := Vin{"3e7146b4f1841a591d5989d6fc01d7ae3631136178d932de36ad0ebe63ba8113", uint16(1)}
-	in2 := Vin{"7b84a50bbc5d8480361a868efaddaef4411f6ceebf9d84e393644f074c289d0f", uint16(1)}
+	in1 := Vin{"eee7e5f815a54b070980c75b3bd0aaf34d197af7566704156faddaaf55d9543b", uint16(0)}
+	in2 := Vin{"83d6cfd8c5df6ba5f2e25a9e1d7773d75ea28c5d9a4cbc6b82d339d8e0154157", uint16(0)}
+	in3 := Vin{"e74a0de34946d508a6865fb9fea2cb8b15dd7cecebd8c135c2233d9adc1849b3", uint16(0)}
+	in4 := Vin{"3e7146b4f1841a591d5989d6fc01d7ae3631136178d932de36ad0ebe63ba8113", uint16(1)}
 
 	// 目标地址和发送金额
 	out1 := Vout{NeoAssetId, "ANYZ11AmUfwiZFLbAWHoExFyBuqgLmfz88", uint64(65)}
 	out2 := Vout{NeoAssetId, "AXXYzk1kn9Bj8PHeqha921gqCpwJNRmuHC", uint64(99999073)}
 
 	// 构建空交易单
-	emptyTrans, err := CreateEmptyRawTransaction(ContractTransaction, []Vin{in1, in2}, []Vout{out1, out2}, nil)
+	emptyTrans, err := CreateEmptyRawTransaction(ContractTransaction, []Vin{in1, in2, in3, in4}, []Vout{out1, out2}, nil)
 
 	if err != nil {
 		t.Error("构建空交易单失败")
@@ -80,11 +82,11 @@ func Test_case1(t *testing.T) {
 		t.Error("插入交易单失败")
 	} else {
 		fmt.Println("合并之后的交易单")
-		fmt.Println(signedTrans)
+		fmt.Println(hex.EncodeToString(signedTrans))
 	}
 
 	// 验证交易单
-	pass := VerifyRawTransaction(signedTrans)
+	pass := VerifyRawTransaction(hex.EncodeToString(signedTrans))
 	if pass {
 		fmt.Println("验证通过!")
 	} else {

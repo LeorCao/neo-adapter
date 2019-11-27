@@ -1512,26 +1512,19 @@ func (wm *WalletManager) getTxOutByCore(txid string, vout uint64) (*Vout, error)
 	}
 
 	output := newTxVoutByCore(result)
-
-	/*
-		{
-			"bestblock": "0000000000012164c0fb1f7ac13462211aaaa83856073bf94faf2ea9c6ea193a",
-			"confirmations": 8,
-			"value": 0.64467249,
-			"scriptPubKey": {
-				"asm": "OP_DUP OP_HASH160 dbb494b649a48b22bfd6383dca1712cc401cddde OP_EQUALVERIFY OP_CHECKSIG",
-				"hex": "76a914dbb494b649a48b22bfd6383dca1712cc401cddde88ac",
-				"reqSigs": 1,
-				"type": "pubkeyhash",
-				"addresses": ["n1Yec3dmXEW4f8B5iJa5EsspNQ4Ar6K3Ek"]
-			},
-			"coinbase": false
-
-		}
-	*/
-
 	return output, nil
+}
 
+func (wm *WalletManager) ClaimGas(toAddr string) error {
+	req := []interface{}{}
+	if len(toAddr) != 0 {
+		req = append(req, toAddr)
+	}
+	_, err := wm.WalletClient.Call("claimgas", req)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 //获取未扫记录
@@ -1575,81 +1568,56 @@ func (wm *WalletManager) DeleteUnscanRecord(height uint64) error {
 
 //GetAssetsAccountBalanceByAddress 查询账户相关地址的交易记录
 func (bs *NEOBlockScanner) GetBalanceByAddress(address ...string) ([]*openwallet.Balance, error) {
-
-	//if bs.wm.Config.RPCServerType != RPCServerExplorer {
-	//	return nil, nil
-	//}
-
-	//addrsBalance := make([]*openwallet.UnspentBalance, 0)
-	//
-	//for _, a := range address {
-	//	balance, err := bs.wm.getBalanceByExplorer(a)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	addrsBalance = append(addrsBalance, balance)
-	//}
-	//
-	//return addrsBalance, nil
-
 	return bs.wm.getBalanceCalUnspent(address...)
-
 }
 
 //getBalanceByExplorer 获取地址余额
-func (wm *WalletManager) getBalanceCalUnspent(address ...string) ([]*openwallet.Balance, error) {
+func (wm *WalletManager) getBalanceCalUnspent(addresses ...string) ([]*openwallet.Balance, error) {
 
-	utxos, err := wm.ListUnspent(0, address...)
-	if err != nil {
-		return nil, err
-	}
+	var (
+		ret = make([]*openwallet.Balance, 0)
+	)
 
-	addrBalanceMap := wm.calculateUnspent(utxos)
-	addrBalanceArr := make([]*openwallet.Balance, 0)
-	for _, a := range address {
-
-		var obj *openwallet.Balance
-		if b, exist := addrBalanceMap[a]; exist {
-			obj = b
-		} else {
-			obj = &openwallet.Balance{
-				Symbol:           wm.Symbol(),
-				Address:          a,
-				Balance:          "0",
-				UnconfirmBalance: "0",
-				ConfirmBalance:   "0",
-			}
+	for _, address := range addresses {
+		utxo, err := wm.ListUnspent(address)
+		if err != nil {
+			return nil, err
 		}
-
-		addrBalanceArr = append(addrBalanceArr, obj)
+		balance := "0"
+		if utxo.NEOUnspent != nil {
+			balance = utxo.NEOUnspent.Amount
+		}
+		ret = append(ret, &openwallet.Balance{
+			Symbol:           wm.Symbol(),
+			Address:          address,
+			Balance:          balance,
+			UnconfirmBalance: "0",
+			ConfirmBalance:   "0",
+		})
 	}
 
-	return addrBalanceArr, nil
+	return ret, nil
 }
 
 //calculateUnspentByExplorer 通过未花计算余额
-func (wm *WalletManager) calculateUnspent(utxos []*UnspentBalance) map[string]*openwallet.Balance {
+func (wm *WalletManager) calculateUnspent(utxo *UnspentBalance) map[string]*openwallet.Balance {
 
 	addrBalanceMap := make(map[string]*openwallet.Balance)
 
-	for _, utxo := range utxos {
-
-		obj, exist := addrBalanceMap[utxo.Address]
-		if !exist {
-			obj = &openwallet.Balance{}
-		}
-
-		obj.Symbol = wm.Symbol()
-		obj.Address = utxo.Address
-		if nil != utxo.NEOUnspent {
-			obj.Balance = utxo.NEOUnspent.Amount
-		} else {
-			obj.Balance = "0"
-		}
-
-		addrBalanceMap[utxo.Address] = obj
+	obj, exist := addrBalanceMap[utxo.Address]
+	if !exist {
+		obj = &openwallet.Balance{}
 	}
+
+	obj.Symbol = wm.Symbol()
+	obj.Address = utxo.Address
+	if nil != utxo.NEOUnspent {
+		obj.Balance = utxo.NEOUnspent.Amount
+	} else {
+		obj.Balance = "0"
+	}
+
+	addrBalanceMap[utxo.Address] = obj
 
 	return addrBalanceMap
 
